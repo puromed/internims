@@ -61,4 +61,24 @@ class User extends Authenticatable
             ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
     }
+
+    public function eligibilityDocs()
+    {
+        return $this->hasMany(EligibilityDoc::class);
+    }
+
+    public function applications()
+    {
+        return $this->hasMany(Application::class);
+    }
+
+    public function internships()
+    {
+        return $this->hasMany(Internship::class);
+    }
+
+    public function logbookEntries()
+    {
+        return $this->hasMany(LogbookEntry::class);
+    }
 }

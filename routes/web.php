@@ -13,13 +13,15 @@ Route::get('/gallery', function () {
     return view('gallery');
 })->name('gallery');
 
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
 
-Route::middleware(['auth'])->group(function () {
+
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
+    // User Settings
+    Volt::route('dashboard', 'dashboard')->name('dashboard');
+
+    // Volt User Settings Routes
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');
     Volt::route('settings/password', 'settings.password')->name('user-password.edit');
     Volt::route('settings/appearance', 'settings.appearance')->name('appearance.edit');
