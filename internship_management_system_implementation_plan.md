@@ -26,7 +26,7 @@
 
 The schedule intentionally front-loads component work and core student flows so that the remaining weeks emphasize iteration, AI tuning, and polish.
 
-```mermaid
+``mermaid
 gantt
     dateFormat  YYYY-MM-DD
     title IMS Lean Build Timeline
@@ -60,9 +60,10 @@ gantt
 - **Stage 2 Placement:** Enforce gating via middleware on `is_eligible`. Create placement form with validation, storing to `applications`. Role Checker button dispatches AI job returning suitability tags stored alongside application record (initially stubbed, activated in Week 6).
 - **Stage 3 Logbooks:**
   - Index view: Paginate 24-week entries with status badges.
-  - Create view: Two-column layout; left column uses `x-textarea-ai` with “Analyze with Gemini” button, right column uses `x-file-upload` for signed logsheet.
+  - Create view: Two-column layout; left column uses `x-textarea-ai` with "Analyze with Gemini" button, right column uses `x-file-upload` for signed logsheet.
   - On submit, persist entry, upload file, dispatch AI analysis job that requests structured JSON (skills, sentiment, risk flags) for faculty to review.[2][3]
   - Show view: Render stored JSON insight as key-value chips and embed signed PDF or provide secure download.
+
 - **Messages:** Lightweight Livewire/Alpine chat view using `messages` table; include filters for faculty vs admin contacts.
 
 ### Faculty Module

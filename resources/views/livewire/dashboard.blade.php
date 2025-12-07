@@ -36,7 +36,7 @@ new class extends Component {
         $placementUnlocked = $eligibilityComplete;
         $logbooksUnlocked = (bool) $placement;
         $weeksCompleted = $placement && $placement->start_date
-            ? min(now()->diffInWeeks($placement->start_date), 24)
+            ? round(min(now()->diffInWeeks($placement->start_date), 24), 1)
             : 0;
 
         // Logbooks
@@ -44,6 +44,7 @@ new class extends Component {
         $logbookTotal = $logbooksQuery->count();
         $logbookApproved = (clone $logbooksQuery)->where('status', 'approved')->count();
         $logbookPending = (clone $logbooksQuery)->whereIn('status', ['submitted', 'pending_review'])->count();
+        $logbookDraft = (clone $logbooksQuery)->where('status', 'draft')->count();
 
         // Notifications
         $unreadNotifications = DB::table('notifications')
@@ -83,6 +84,16 @@ new class extends Component {
                 'value' => $this->uploadedDocs,
                 'suffix' => "/ {$this->requiredDocs} uploaded",
                 'badge' => ['text' => $this->missingDocs ? 'Incomplete' : 'Complete', 'color' => $this->missingDocs ? 'red' : 'green', 'icon' => $this->missingDocs ? 'alert-circle' : 'check'],
+            ],
+            [
+                'label' => 'Logbooks',
+                'value' => $logbookTotal,
+                'suffix' => '/ 24 weeks',
+                'badge' => [
+                    'text' => $logbookApproved . ' approved',
+                    'color' => $logbookApproved > 0 ? 'green' : 'gray',
+                    'icon' => $logbookApproved > 0 ? 'check' : null
+                ],
             ],
             [
                 'label' => 'Notifications',
@@ -143,11 +154,13 @@ new class extends Component {
             ],
             [
                 'title' => 'Submit Weekly Logbooks',
-                'description' => 'Complete Stage 2 to start submitting logbooks.',
+                'description' => $logbooksUnlocked
+                    ? "Track your weekly progress. {$logbookApproved} approved, {$logbookPending} pending."
+                    : 'Complete Stage 2 to start submitting logbooks.',
                 'icon' => 'book-open',
                 'accent' => 'gray',
-                'status' => $logbooksUnlocked ? 'Open' : 'Locked',
-                'status_color' => $logbooksUnlocked ? 'green' : 'gray',
+                'status' => $logbooksUnlocked ? "{$logbookTotal} / 24 submitted" : 'Locked',
+                'status_color' => $logbooksUnlocked ? ($logbookTotal > 0 ? 'green' : 'yellow') : 'gray',
                 'locked' => !$logbooksUnlocked,
             ],
         ];

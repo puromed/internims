@@ -12,7 +12,25 @@ $statusBg = [
 @endphp
 
 @foreach($actions as $action)
+    @php
+        $href = !$action['locked'] && ($action['title'] === 'Upload Eligibility Documents')
+            ? route('eligibility.index')
+            : null;
+        $href = null;
+        if (!$action['locked']) {
+            if ($action['title'] === 'Upload Eligibility Documents') {
+                $href = route('eligibility.index');
+            } elseif ($action['title'] === 'Register Placement Company') {
+                $href = route('placement.index');
+            } elseif ($action['title'] === 'Submit Weekly Logbooks') {
+                $href = route('logbooks.index');
+            }
+        }
+    @endphp
     <div class="group relative p-6 {{ $action['locked'] ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer' }}">
+        @if($href)
+            <a href="{{ $href }}" class="absolute inset-0" aria-label="{{ $action['title'] }}"></a>
+        @endif
         <div>
             <span class="inline-flex rounded-lg {{ $accentBg[$action['accent']] ?? 'bg-gray-100 text-gray-400' }} p-3 ring-4 ring-white">
                 <i data-lucide="{{ $action['icon'] }}" class="h-6 w-6"></i>

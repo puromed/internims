@@ -17,15 +17,15 @@
                         <x-slot:icon><i data-lucide="layout-dashboard" class="size-5"></i></x-slot:icon>
                         {{ __('Dashboard') }}
                     </flux:navlist.item>
-                    <flux:navlist.item href="#" wire:navigate>
+                    <flux:navlist.item :href="route('eligibility.index')" :current="request()->routeIs('eligibility.index')" wire:navigate>
                         <x-slot:icon><i data-lucide="file-check" class="size-5"></i></x-slot:icon>
                         {{ __('Eligibility Docs') }}
                     </flux:navlist.item>
-                    <flux:navlist.item href="#" wire:navigate>
+                    <flux:navlist.item :href="route('placement.index')" :current="request()->routeIs('placement.index')" wire:navigate>
                         <x-slot:icon><i data-lucide="briefcase" class="size-5"></i></x-slot:icon>
                         {{ __('My Placement') }}
                     </flux:navlist.item>
-                    <flux:navlist.item href="#" wire:navigate>
+                    <flux:navlist.item :href="route('logbooks.index')" :current="request()->routeIs('logbooks.index')" wire:navigate>
                         <x-slot:icon><i data-lucide="book-open" class="size-5"></i></x-slot:icon>
                         {{ __('Weekly Logbooks') }}
                     </flux:navlist.item>

@@ -20,6 +20,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // User Settings
     Volt::route('dashboard', 'dashboard')->name('dashboard');
+    Volt::route('eligibility', 'eligibility.index')->name('eligibility.index');
+    Volt::route('placement', 'placement.index')->name('placement.index');
+    Volt::route('logbooks', 'logbooks.index')->name('logbooks.index');
+    Volt::route('logbooks/{logbook}', 'logbooks.show')->name('logbooks.show');
 
     // Volt User Settings Routes
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');
