@@ -2,11 +2,20 @@
 
 <cite>
 **Referenced Files in This Document**   
-- [LogbookEntry.php](file://app/Models/LogbookEntry.php#L1-L31)
-- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L1-L276)
-- [create_internship_tables.php](file://database/migrations/2025_12_05_000100_create_internship_tables.php#L45-L55)
-- [internship_management_system_implementation_plan.md](file://internship_management_system_implementation_plan.md#L14-L144)
+- [LogbookEntry.php](file://app/Models/LogbookEntry.php#L1-L48)
+- [index.blade.php](file://resources/views/livewire/faculty/logbooks/index.blade.php#L1-L195)
+- [show.blade.php](file://resources/views/livewire/faculty/logbooks/show.blade.php#L1-L183)
+- [internship_management_system_implementation_plan.md](file://internship_management_system_implementation_plan.md#L1-L158)
 </cite>
+
+## Update Summary
+**Changes Made**   
+- Updated the Data Model and Status Workflow section to reflect new supervisor-specific status fields
+- Revised the AI Analysis Integration section with accurate JSON structure and implementation details
+- Rewrote the Faculty Verification Workflow to reflect actual Livewire component implementation
+- Updated the User Interface and Livewire Implementation section with current blade template details
+- Added new diagram reflecting actual faculty review workflow
+- Removed outdated references to markStatus() method as it has been replaced by direct Livewire actions
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -34,18 +43,22 @@ rejected --> draft : Student revises
 ```
 
 **Diagram sources**  
-- [create_internship_tables.php](file://database/migrations/2025_12_05_000100_create_internship_tables.php#L51)
-- [LogbookEntry.php](file://app/Models/LogbookEntry.php#L17)
+- [LogbookEntry.php](file://app/Models/LogbookEntry.php#L18-L20)
+- [internship_management_system_implementation_plan.md](file://internship_management_system_implementation_plan.md#L64)
 
 The `LogbookEntry` model contains key fields that support the verification workflow:
 - `status`: Tracks the current state (draft, submitted, pending_review, approved, rejected)
+- `supervisor_status`: Faculty-specific status (pending, verified, revision_requested)
 - `ai_analysis_json`: Stores AI-generated insights as structured JSON
 - `submitted_at`: Records when the entry was submitted
 - `week_number`: Identifies the academic week being documented
+- `supervisor_comment`: Faculty feedback when requesting revisions
+- `reviewed_at`: Timestamp of faculty review
+- `reviewed_by`: Foreign key to faculty reviewer
 
 **Section sources**  
-- [LogbookEntry.php](file://app/Models/LogbookEntry.php#L12-L20)
-- [create_internship_tables.php](file://database/migrations/2025_12_05_000100_create_internship_tables.php#L45-L55)
+- [LogbookEntry.php](file://app/Models/LogbookEntry.php#L13-L25)
+- [internship_management_system_implementation_plan.md](file://internship_management_system_implementation_plan.md#L72)
 
 ## AI Analysis Integration
 The system integrates AI analysis to provide faculty with enhanced insights into student logbook entries. When a student submits a logbook entry, the system queues an AI analysis job that processes the text content and generates structured insights.
@@ -68,8 +81,8 @@ Frontend->>Faculty : Notify for review
 ```
 
 **Diagram sources**  
-- [internship_management_system_implementation_plan.md](file://internship_management_system_implementation_plan.md#L96-L100)
-- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L78-L83)
+- [internship_management_system_implementation_plan.md](file://internship_management_system_implementation_plan.md#L98-L101)
+- [index.blade.php](file://resources/views/livewire/faculty/logbooks/index.blade.php#L162-L165)
 
 The AI analysis generates a JSON structure containing:
 - `sentiment`: Positive, negative, or neutral assessment of the entry
@@ -80,8 +93,8 @@ The AI analysis generates a JSON structure containing:
 The implementation plan specifies using Gemini API as the primary provider due to its structured output capabilities, with Z.AI as a fallback option to ensure reliability.
 
 **Section sources**  
-- [internship_management_system_implementation_plan.md](file://internship_management_system_implementation_plan.md#L86-L100)
-- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L78-L83)
+- [internship_management_system_implementation_plan.md](file://internship_management_system_implementation_plan.md#L88-L112)
+- [show.blade.php](file://resources/views/livewire/faculty/logbooks/show.blade.php#L189-L276)
 
 ## Faculty Verification Workflow
 Faculty supervisors verify logbook entries through a streamlined workflow that integrates AI insights with manual assessment. The verification process is designed to be efficient while maintaining academic rigor.
@@ -101,10 +114,10 @@ G --> J[Entry Approved]
 ```
 
 **Diagram sources**  
-- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L256-L267)
-- [internship_management_system_implementation_plan.md](file://internship_management_system_implementation_plan.md#L71)
+- [internship_management_system_implementation_plan.md](file://internship_management_system_implementation_plan.md#L72)
+- [show.blade.php](file://resources/views/livewire/faculty/logbooks/show.blade.php#L118-L133)
 
-The `markStatus()` method enables faculty to update the verification status through simple UI interactions. This method validates the user's authorization, updates the entry status in the database, and provides immediate feedback to the user.
+The faculty review process is implemented through direct Livewire component actions rather than a generic markStatus() method. The `approve()` and `requestRevision()` methods handle status updates with proper authorization and validation.
 
 ```mermaid
 sequenceDiagram
@@ -112,20 +125,16 @@ participant Faculty
 participant Frontend
 participant Server
 participant Database
-Faculty->>Frontend : Click status button
-Frontend->>Server : wire : click markStatus(id, status)
-Server->>Database : Update entry status
+Faculty->>Frontend : Click approve/request revision
+Frontend->>Server : wire : click approve() or requestRevision()
+Server->>Database : Update supervisor_status and related fields
 Database-->>Server : Confirmation
-Server-->>Frontend : Refresh logbook list
+Server-->>Frontend : Refresh page with success notification
 Frontend-->>Faculty : Show success notification
 ```
 
-**Diagram sources**  
-- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L103-L112)
-- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L258-L266)
-
 **Section sources**  
-- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L103-L112)
+- [show.blade.php](file://resources/views/livewire/faculty/logbooks/show.blade.php#L22-L60)
 
 ## User Interface and Livewire Implementation
 The user interface for logbook verification is implemented using Livewire, providing a reactive and seamless experience for both students and faculty. The system conditionally renders moderation controls based on user role and entry status.
@@ -142,8 +151,8 @@ E --> H[Approve/Reject Buttons]
 ```
 
 **Diagram sources**  
-- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L256-L267)
-- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L189-L198)
+- [index.blade.php](file://resources/views/livewire/faculty/logbooks/index.blade.php#L138-L185)
+- [show.blade.php](file://resources/views/livewire/faculty/logbooks/show.blade.php#L91-L134)
 
 The frontend implements several key features:
 - Conditional rendering of moderation controls using the `$canModerate` property
@@ -151,10 +160,11 @@ The frontend implements several key features:
 - Wire:click actions that trigger status updates without page reloads
 - Status-specific styling using Tailwind CSS classes
 
-The blade template shows how Livewire wire:click actions are used to trigger the `markStatus()` method with the appropriate parameters, enabling faculty to update verification states through simple button clicks.
+The blade template shows how Livewire wire:click actions are used to trigger the `approve()` and `requestRevision()` methods, enabling faculty to update verification states through simple button clicks.
 
 **Section sources**  
-- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L1-L276)
+- [index.blade.php](file://resources/views/livewire/faculty/logbooks/index.blade.php#L1-L195)
+- [show.blade.php](file://resources/views/livewire/faculty/logbooks/show.blade.php#L1-L183)
 
 ## Common Scenarios and Evaluation Guidance
 The Logbook Verification system addresses several common scenarios that arise during the faculty review process. Faculty are guided to maintain consistent evaluation criteria across multiple students while leveraging AI insights to enhance their feedback.

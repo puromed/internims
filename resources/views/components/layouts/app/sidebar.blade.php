@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         @include('partials.head')
     </head>
@@ -7,11 +7,25 @@
         <flux:sidebar sticky stashable class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
-            <a href="{{ route('dashboard') }}" class="me-5 flex items-center space-x-2 rtl:space-x-reverse" wire:navigate>
+            <a href="{{ auth()->user()->isFaculty() ? route('faculty.dashboard') : route('dashboard') }}" class="me-5 flex items-center space-x-2 rtl:space-x-reverse" wire:navigate>
                 <x-app-logo />
             </a>
 
-            <flux:navlist variant="outline">
+           <flux:navlist variant="outline">
+            @if(auth()->user()->isFaculty() || auth()->user()->isAdmin())
+                {{-- Faculty Navigation --}}
+                <flux:navlist.group :heading="__('Faculty')" class="grid">
+                    <flux:navlist.item :href="route('faculty.dashboard')" :current="request()->routeIs('faculty.dashboard')" wire:navigate>
+                        <x-slot:icon><i data-lucide="layout-dashboard" class="size-5"></i></x-slot:icon>
+                        {{ __('Dashboard') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item :href="route('faculty.logbooks.index')" :current="request()->routeIs('faculty.logbooks.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="book-open" class="size-5"></i></x-slot:icon>
+                        {{ __('Student Logbooks') }}
+                    </flux:navlist.item>
+                </flux:navlist.group>
+            @else
+                {{-- Student Navigation --}}
                 <flux:navlist.group :heading="__('Internship')" class="grid">
                     <flux:navlist.item :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         <x-slot:icon><i data-lucide="layout-dashboard" class="size-5"></i></x-slot:icon>
@@ -29,8 +43,28 @@
                         <x-slot:icon><i data-lucide="book-open" class="size-5"></i></x-slot:icon>
                         {{ __('Weekly Logbooks') }}
                     </flux:navlist.item>
-                </flux:navlist.group>
-            </flux:navlist>
+            </flux:navlist.group>
+        @endif
+    </flux:navlist>
+
+            <flux:dropdown x-data align="end" class="mt-4">
+                <flux:button variant="subtle" square class="w-full group justify-between" aria-label="Preferred color scheme">
+                    <div class="flex items-center gap-2 text-sm font-semibold">
+                        <flux:icon.sun x-show="$flux.appearance === 'light'" variant="mini" class="text-zinc-600 dark:text-white" />
+                        <flux:icon.moon x-show="$flux.appearance === 'dark'" variant="mini" class="text-zinc-600 dark:text-white" />
+                        <flux:icon.moon x-show="$flux.appearance === 'system' && $flux.dark" variant="mini" class="text-zinc-600 dark:text-white" />
+                        <flux:icon.sun x-show="$flux.appearance === 'system' && ! $flux.dark" variant="mini" class="text-zinc-600 dark:text-white" />
+                        <span>{{ __('Appearance') }}</span>
+                    </div>
+                    <flux:icon.chevron-down variant="mini" class="text-zinc-500" />
+                </flux:button>
+
+                <flux:menu>
+                    <flux:menu.item icon="sun" x-on:click="$flux.appearance = 'light'">{{ __('Light') }}</flux:menu.item>
+                    <flux:menu.item icon="moon" x-on:click="$flux.appearance = 'dark'">{{ __('Dark') }}</flux:menu.item>
+                    <flux:menu.item icon="computer-desktop" x-on:click="$flux.appearance = 'system'">{{ __('System') }}</flux:menu.item>
+                </flux:menu>
+            </flux:dropdown>
 
             <flux:spacer />
 
@@ -143,6 +177,57 @@
 
         @fluxScripts
         <script>
+            (() => {
+                // Sync Flux appearance with backend
+                const updateUrl = @json(route('appearance.update'));
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+                // Initialize Flux appearance from server preference
+                const serverPreference = @json(auth()->user()->theme_preference ?? 'system');
+                if (!localStorage.getItem('flux:appearance')) {
+                    Flux.appearance = serverPreference;
+                }
+
+                // Watch for appearance changes and sync to backend
+                const observer = new MutationObserver(() => {
+                    const currentAppearance = Flux.appearance;
+                    
+                    fetch(updateUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrf,
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ theme: currentAppearance }),
+                    }).catch(() => {});
+                });
+
+                // Observe data-flux-appearance attribute changes
+                observer.observe(document.documentElement, {
+                    attributes: true,
+                    attributeFilter: ['data-flux-appearance']
+                });
+
+                // Also listen for direct property changes
+                let lastAppearance = Flux.appearance;
+                setInterval(() => {
+                    if (Flux.appearance !== lastAppearance) {
+                        lastAppearance = Flux.appearance;
+                        
+                        fetch(updateUrl, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': csrf,
+                                Accept: 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ theme: lastAppearance }),
+                        }).catch(() => {});
+                    }
+                }, 500);
+            })();
+
             document.addEventListener('DOMContentLoaded', () => window.lucide?.createIcons());
             document.addEventListener('livewire:navigated', () => window.lucide?.createIcons());
         </script>

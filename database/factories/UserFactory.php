@@ -25,6 +25,7 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
+            'role' => 'student',
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
@@ -32,7 +33,25 @@ class UserFactory extends Factory
             'two_factor_secret' => Str::random(10),
             'two_factor_recovery_codes' => Str::random(10),
             'two_factor_confirmed_at' => now(),
+            'theme_preference' => 'system',
+
         ];
+    }
+
+    /**
+     * Indicate that the role should be faculty.
+     */
+    public function faculty(): static
+    {
+        return $this->state(fn () => ['role' => 'faculty']);
+    }
+
+    /**
+     * Indicate that the role should be admin.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn () => ['role' => 'admin']);
     }
 
     /**

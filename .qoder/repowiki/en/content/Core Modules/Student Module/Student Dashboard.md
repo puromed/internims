@@ -14,6 +14,13 @@
 - [create_internship_tables.php](file://database/migrations/2025_12_05_000100_create_internship_tables.php)
 </cite>
 
+## Update Summary
+**Changes Made**   
+- Updated logbook statistics to include total submitted, approved, draft, and pending review counts
+- Enhanced weeks completed calculation with decimal precision
+- Added detailed logbook status tracking in action cards and stats grid
+- Updated documentation to reflect new logbook metrics and their UI representation
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Core Components](#core-components)
@@ -69,7 +76,7 @@ A --> U[Important Dates]
 
 ### Data Aggregation and State Management
 
-The Student Dashboard component aggregates data from multiple models through Eloquent relationships defined in the User model. The mount method initializes all dashboard state by querying related models and calculating key metrics. Eligibility completion is determined by counting approved eligibility documents against required document types (resume, transcript, offer_letter). Placement status is derived from the latest internship record, while logbook progress tracks submitted entries against the 24-week requirement. The component maintains reactivity by storing calculated values in public properties that automatically update the UI when changed.
+The Student Dashboard component aggregates data from multiple models through Eloquent relationships defined in the User model. The mount method initializes all dashboard state by querying related models and calculating key metrics. Eligibility completion is determined by counting approved eligibility documents against required document types (resume, transcript, offer_letter). Placement status is derived from the latest internship record, while logbook progress tracks submitted entries against the 24-week requirement. The component now includes enhanced logbook statistics with total submitted, approved, draft, and pending review counts. The weeks completed calculation has been updated to use decimal precision for more accurate progress tracking. The component maintains reactivity by storing calculated values in public properties that automatically update the UI when changed.
 
 ```mermaid
 sequenceDiagram
@@ -95,7 +102,7 @@ Dashboard->>Dashboard : Populate stepper, stats, actions
 
 ### UI Rendering Logic
 
-The dashboard implements sophisticated conditional rendering logic for its progress stepper, stats grid, and action cards. The progress stepper activates stages based on eligibility completion, placement registration, and logbook submission. Each stat card displays contextual information with dynamic badges that reflect current status (e.g., "Incomplete" in red for missing documents, "Complete" in green when all requirements are met). Action cards are conditionally locked or unlocked based on prerequisite completion, with visual indicators and navigation links that guide students through the workflow. The UI uses Tailwind CSS classes to provide visual feedback on interactive elements, including hover states and opacity changes for locked actions.
+The dashboard implements sophisticated conditional rendering logic for its progress stepper, stats grid, and action cards. The progress stepper activates stages based on eligibility completion, placement registration, and logbook submission. Each stat card displays contextual information with dynamic badges that reflect current status (e.g., "Incomplete" in red for missing documents, "Complete" in green when all requirements are met). The Logbooks stat card now displays the total count of approved entries in its badge. Action cards are conditionally locked or unlocked based on prerequisite completion, with visual indicators and navigation links that guide students through the workflow. The Submit Weekly Logbooks action card now includes detailed status information showing approved and pending counts. The UI uses Tailwind CSS classes to provide visual feedback on interactive elements, including hover states and opacity changes for locked actions.
 
 ```mermaid
 flowchart TD
@@ -115,7 +122,7 @@ PlacementCheck --> |Has Internship Record| PlacementActive[Placement Unlocked]
 PlacementCheck --> |No Internship Record| PlacementLocked[Placement Locked]
 ```
 
-**Diagram sources**
+**Section sources**
 - [dashboard.blade.php](file://resources/views/livewire/dashboard.blade.php#L56-L167)
 - [dashboard-actions.blade.php](file://resources/views/livewire/partials/dashboard-actions.blade.php#L1-L62)
 
@@ -247,14 +254,14 @@ User --> LogbookEntry : "Has Many"
 
 ## Performance Considerations
 
-The Student Dashboard implementation demonstrates several performance optimization techniques. It uses Eloquent's relationship methods with appropriate constraints to minimize database queries, such as using latest('start_date') to retrieve the most recent internship. The component clones query builders when needed to avoid re-executing expensive database operations. However, there are opportunities for further optimization, particularly in reducing the number of individual queries through eager loading or using select statements to retrieve only necessary fields. The current implementation could benefit from caching certain calculated values, especially for users with extensive logbook entries or document histories. The use of Livewire's reactivity system ensures that only changed components are re-rendered, minimizing frontend performance impact.
+The Student Dashboard implementation demonstrates several performance optimization techniques. It uses Eloquent's relationship methods with appropriate constraints to minimize database queries, such as using latest('start_date') to retrieve the most recent internship. The component clones query builders when needed to avoid re-executing expensive database operations. The logbook statistics are calculated efficiently using cloned query builders to prevent multiple database hits. However, there are opportunities for further optimization, particularly in reducing the number of individual queries through eager loading or using select statements to retrieve only necessary fields. The current implementation could benefit from caching certain calculated values, especially for users with extensive logbook entries or document histories. The use of Livewire's reactivity system ensures that only changed components are re-rendered, minimizing frontend performance impact.
 
 **Section sources**
 - [dashboard.blade.php](file://resources/views/livewire/dashboard.blade.php#L28-L47)
 
 ## Troubleshooting Guide
 
-Common issues with the Student Dashboard typically involve stale data display, which can occur when Livewire's reactivity system fails to detect changes made outside the component's scope. This can be resolved by implementing proper event broadcasting or using Livewire's refresh mechanism. Another potential issue is incorrect stage progression, which may result from flawed logic in the currentStageIndex calculation. Developers should verify that the eligibilityComplete flag accurately reflects approved document counts and that placement status correctly considers the latest internship record. Notification display issues may arise from improper JSON structure in the notifications table, requiring validation of the data field format. Performance problems with large datasets can be addressed by implementing pagination for logbook entries and using database indexing on frequently queried columns.
+Common issues with the Student Dashboard typically involve stale data display, which can occur when Livewire's reactivity system fails to detect changes made outside the component's scope. This can be resolved by implementing proper event broadcasting or using Livewire's refresh mechanism. Another potential issue is incorrect stage progression, which may result from flawed logic in the currentStageIndex calculation. Developers should verify that the eligibilityComplete flag accurately reflects approved document counts and that placement status correctly considers the latest internship record. Notification display issues may arise from improper JSON structure in the notifications table, requiring validation of the data field format. Performance problems with large datasets can be addressed by implementing pagination for logbook entries and using database indexing on frequently queried columns. The logbook statistics calculations should be verified to ensure they accurately reflect the different status counts (approved, pending, draft).
 
 **Section sources**
 - [dashboard.blade.php](file://resources/views/livewire/dashboard.blade.php#L56-L59)
@@ -262,4 +269,4 @@ Common issues with the Student Dashboard typically involve stale data display, w
 
 ## Conclusion
 
-The Student Dashboard component effectively serves as the central hub for students navigating the internship lifecycle. Its implementation as a Livewire Volt component provides a reactive, single-page experience that dynamically updates based on the student's progress. By aggregating data from multiple models and presenting it through intuitive visual components like the progress stepper and action cards, the dashboard guides students through each stage of their internship journey. The integration with Laravel's notifications system ensures timely feedback on important events, while the conditional rendering logic provides clear guidance on required actions. This comprehensive approach creates a cohesive user experience that simplifies complex workflow management into an accessible interface.
+The Student Dashboard component effectively serves as the central hub for students navigating the internship lifecycle. Its implementation as a Livewire Volt component provides a reactive, single-page experience that dynamically updates based on the student's progress. By aggregating data from multiple models and presenting it through intuitive visual components like the progress stepper and action cards, the dashboard guides students through each stage of their internship journey. The integration with Laravel's notifications system ensures timely feedback on important events, while the conditional rendering logic provides clear guidance on required actions. The recent updates to include detailed logbook statistics and decimal precision in weeks completed calculation enhance the dashboard's accuracy and usefulness. This comprehensive approach creates a cohesive user experience that simplifies complex workflow management into an accessible interface.
