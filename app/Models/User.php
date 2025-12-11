@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -23,6 +24,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'theme_preference',
     ];
 
     /**
@@ -80,5 +83,34 @@ class User extends Authenticatable
     public function logbookEntries()
     {
         return $this->hasMany(LogbookEntry::class);
+    }
+
+    public function supervisedInternships(): HasMany
+    {
+        return $this->hasMany(Internship::class, 'faculty_supervisor_id');
+    }
+
+    public function isFaculty(): bool
+    {
+        return $this->role === 'faculty';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Is this user the supervising faculty for the given logbook entry's student?
+     */
+    public function supervisesLogbookEntry(LogbookEntry $entry): bool
+    {
+        if (! $this->isFaculty()) {
+            return false;
+        }
+
+        return $this->supervisedInternships()
+            ->where('user_id', $entry->user_id)
+            ->exists();
     }
 }

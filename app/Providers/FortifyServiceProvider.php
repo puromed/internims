@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Contracts\LoginResponse;
+use Laravel\Fortify\Contracts\TwoFactorLoginResponse;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -29,6 +31,7 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+        $this->configureAuthentication();
     }
 
     /**
@@ -67,6 +70,48 @@ class FortifyServiceProvider extends ServiceProvider
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
+        });
+    }
+
+    /**
+     * Configure authentication redirects.
+     */
+    private function configureAuthentication(): void
+    {
+        $this->app->singleton(LoginResponse::class, function () {
+            return new class implements LoginResponse
+            {
+                public function toResponse($request)
+                {
+                    $user = $request->user();
+
+                    // Redirect faculty users to faculty dashboard
+                    if ($user->isFaculty() || $user->isAdmin()) {
+                        return redirect()->intended(route('faculty.dashboard'));
+                    }
+
+                    // Redirect students to student dashboard
+                    return redirect()->intended(route('dashboard'));
+                }
+            };
+        });
+
+        $this->app->singleton(TwoFactorLoginResponse::class, function () {
+            return new class implements TwoFactorLoginResponse
+            {
+                public function toResponse($request)
+                {
+                    $user = $request->user();
+
+                    // Redirect faculty users to faculty dashboard
+                    if ($user->isFaculty() || $user->isAdmin()) {
+                        return redirect()->intended(route('faculty.dashboard'));
+                    }
+
+                    // Redirect students to student dashboard
+                    return redirect()->intended(route('dashboard'));
+                }
+            };
         });
     }
 }

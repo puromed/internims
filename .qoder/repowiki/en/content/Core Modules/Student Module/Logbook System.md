@@ -9,7 +9,18 @@
 - [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php)
 - [web.php](file://routes/web.php)
 - [implementation_plan.md](file://internship_management_system_implementation_plan.md)
+- [show.blade.php](file://resources/views/livewire/logbooks/show.blade.php)
+- [2025_12_08_130250_add_supervisor_fields_to_logbook_entries_table.php](file://database/migrations/2025_12_08_130250_add_supervisor_fields_to_logbook_entries_table.php)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated Introduction to reflect AI analysis functionality
+- Enhanced Core Components section with AI submission pathway details
+- Revised Architecture Overview with AI analysis flow
+- Expanded Detailed Component Analysis with AI analysis implementation details
+- Added new section for AI Analysis Data Structure
+- Updated Troubleshooting Guide with AI-specific issues
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -17,17 +28,23 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
+6. [AI Analysis Data Structure](#ai-analysis-data-structure)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the Logbook System feature that enables weekly internship progress reporting with optional AI analysis. It covers the Livewire component that supports:
+This document explains the Logbook System feature that enables weekly internship progress reporting with AI analysis. It covers the Livewire component that supports:
 - Direct submission (status transitions from draft to submitted)
 - AI-assisted analysis (status transitions from draft to pending_review, later to approved or rejected)
 
 It documents the data flow from text input and optional file attachment through validation to persistence in the logbook_entries table, including how the ai_analysis_json field is populated with structured data (sentiment, skills, summary, analyzed_at). It also explains the two submission pathways, status transitions, entry locking after submission, integration with the User model and the dependency on approved placement status, and how this system contributes to completing the internship lifecycle.
+
+**Section sources**
+- [LogbookEntry.php](file://app/Models/LogbookEntry.php#L12-L25)
+- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L1-L125)
+- [implementation_plan.md](file://internship_management_system_implementation_plan.md#L86-L116)
 
 ## Project Structure
 The Logbook System spans models, migrations, Livewire component, Blade view, and routing. The Livewire component orchestrates validation, persistence, and UI updates, while the database schema defines the logbook_entries table and its fields.
@@ -209,6 +226,31 @@ This plan provides the blueprint for moving from the current stub to a productio
 **Section sources**
 - [implementation_plan.md](file://internship_management_system_implementation_plan.md#L86-L116)
 - [implementation_plan.md](file://internship_management_system_implementation_plan.md#L131-L144)
+
+## AI Analysis Data Structure
+The AI analysis functionality stores structured data in the ai_analysis_json field of the logbook_entries table. This JSON structure contains key insights extracted from student logbook entries:
+
+- **Sentiment**: Categorizes the emotional tone of the entry as positive, negative, or neutral
+- **Skills identified**: Array of professional skills detected in the text (e.g., problem solving, teamwork, communication)
+- **Summary**: Concise AI-generated summary highlighting key activities and achievements
+- **Analyzed at**: Timestamp when the analysis was performed (ISO 8601 format)
+
+The implementation uses a placeholder structure during development:
+```php
+$aiAnalysis = [
+    'sentiment' => 'positive',
+    'skills_identified' => ['problem solving', 'teamwork', 'communication', 'technical skills'],
+    'summary' => 'This week, the intern demonstrated strong problem solving and teamwork skills while contributing to technical projects with effective communication.',
+    'analyzed_at' => now()->toISOString(),
+];
+```
+
+The show.blade.php view renders these insights in a dedicated AI Insights panel, displaying the summary, skills as badges, sentiment with appropriate icons, and the analysis timestamp.
+
+**Section sources**
+- [index.blade.php](file://resources/views/livewire/logbooks/index.blade.php#L91-L97)
+- [show.blade.php](file://resources/views/livewire/logbooks/show.blade.php#L189-L278)
+- [LogbookEntry.php](file://app/Models/LogbookEntry.php#L28-L29)
 
 ## Dependency Analysis
 - User -> LogbookEntry: One-to-many relationship.

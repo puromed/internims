@@ -135,6 +135,8 @@ The navigation system implements a responsive pattern that adapts to different s
 
 On mobile devices, the navigation transforms into a collapsible sidebar that is hidden by default and accessible via a hamburger menu icon. The mobile navigation includes both platform navigation and external links, with appropriate spacing and touch targets for mobile interaction. The navigation system uses Livewire's `wire:navigate` directive for client-side routing, enabling smooth page transitions without full page reloads.
 
+The sidebar navigation has been updated to include direct links to eligibility, placement, and logbooks sections using dynamic route helpers and current state indicators. Each navigation item now uses the `:current="request()->routeIs('route.name')"` directive to highlight the active section, improving user orientation within the application. The routes are generated using Laravel's `route()` helper function, ensuring URL consistency and proper route binding.
+
 ```mermaid
 flowchart TD
 A[User Interaction] --> B{Screen Size}
@@ -159,7 +161,9 @@ L --> M[Render Updated Page]
 
 **Section sources**
 - [sidebar.blade.php](file://resources/views/components/layouts/app/sidebar.blade.php)
-- [header.blade.php](file://resources/views/components/layouts/app/header.blade.php)
+- [eligibility/index.blade.php](file://resources/views/livewire/eligibility/index.blade.php)
+- [placement/index.blade.php](file://resources/views/livewire/placement/index.blade.php)
+- [logbooks/index.blade.php](file://resources/views/livewire/logbooks/index.blade.php)
 
 ## Responsive Behavior
 The layout system implements comprehensive responsive design principles using Tailwind CSS utility classes. The responsive behavior is designed to provide an optimal user experience across desktop, tablet, and mobile devices. Key responsive features include:

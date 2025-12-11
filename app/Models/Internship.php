@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Internship extends Model
 {
@@ -17,6 +18,7 @@ class Internship extends Model
         'start_date',
         'end_date',
         'status',
+        'faculty_supervisor_id',
     ];
 
     protected $casts = [
@@ -32,5 +34,10 @@ class Internship extends Model
     public function application()
     {
         return $this->belongsTo(Application::class);
+    }
+
+    public function facultySupervisor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'faculty_supervisor_id');
     }
 }
