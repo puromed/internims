@@ -78,7 +78,7 @@ new class extends Component {
                     Week {{ $logbook->week_number }} – {{ $logbook->user->name ?? 'Student' }}
                 </h2>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    AI insights on the left, PDF logsheet on the right.
+                    Review the student's entry and signed logsheet.
                 </p>
             </div>
 
@@ -172,9 +172,8 @@ new class extends Component {
 
         {{-- Two-column layout --}}
         <div class="grid gap-6 lg:grid-cols-3">
-            {{-- Left: AI insights + comment box + action buttons --}}
+            {{-- Left: Comment box + action buttons --}}
             <div class="lg:col-span-1 space-y-6">
-                {{-- AI insights card: you can largely reuse the AI card from student logbook show --}}
                 {{-- Supervisor decision block --}}
                 <div class="overflow-hidden rounded-2xl bg-white dark:bg-slate-900/80 shadow-sm ring-1 ring-gray-200 dark:ring-white/10">
                     <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700">

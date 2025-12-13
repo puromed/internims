@@ -33,7 +33,7 @@ new class extends Component {
                 Week {{ $logbook->week_number }} Logbook
             </h2>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-300">
-                Review your weekly entry, AI insights, and signed logsheet.
+                Review your weekly entry and signed logsheet.
             </p>
         </div>
         <div class="mt-4 flex flex-col items-end gap-2 md:ml-4 md:mt-0">
@@ -183,107 +183,7 @@ new class extends Component {
             </div>
         </div>
 
-        {{-- Right Column: AI Insights + Logsheet --}}
-        <div class="lg:col-span-1 space-y-6">
-            {{-- AI Insights Panel --}}
-            @php
-                $analysis = $logbook->ai_analysis_json ?? [];
-            @endphp
-
-            <div class="overflow-hidden rounded-2xl bg-gradient-to-b from-indigo-50 to-white shadow-sm ring-1 ring-indigo-100 dark:from-[#1f2140] dark:to-[#111227] dark:ring-indigo-500/20">
-                <div class="px-6 py-5 border-b border-indigo-100 dark:border-indigo-500/20">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2.5 bg-gradient-to-br from-indigo-500 to-[#27233A] rounded-lg text-white shadow-lg">
-                            <i data-lucide="sparkles" class="h-5 w-5"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold text-gray-900 dark:text-gray-100">AI Insights</h3>
-                            <p class="text-xs text-gray-500 dark:text-indigo-200/80">Extracted from your entry</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="p-6">
-                    @if(!empty($analysis))
-                        <div class="space-y-5">
-                            {{-- Summary --}}
-                            @if(!empty($analysis['summary']))
-                                <div>
-                                    <p class="text-xs font-bold uppercase text-gray-400 tracking-wider mb-2 dark:text-indigo-200/80">Summary</p>
-                                    <div class="rounded-lg bg-white p-3 ring-1 ring-gray-200 dark:bg-indigo-900/40 dark:ring-indigo-500/30">
-                                        <p class="text-sm text-gray-600 italic dark:text-indigo-100">{{ $analysis['summary'] }}</p>
-                                    </div>
-                                </div>
-                            @endif
-
-                            {{-- Skills Detected --}}
-                            @if(!empty($analysis['skills_identified']) && is_array($analysis['skills_identified']))
-                                <div>
-                                    <p class="text-xs font-bold uppercase text-gray-400 tracking-wider mb-2 dark:text-indigo-200/80">Skills Highlighted</p>
-                                    <div class="flex flex-wrap gap-2">
-                                        @foreach($analysis['skills_identified'] as $skill)
-                                            <span class="inline-flex items-center rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-500/10 dark:text-blue-200 dark:ring-blue-400/30">
-                                                <i data-lucide="check-circle-2" class="mr-1 h-3.5 w-3.5"></i>
-                                                {{ $skill }}
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endif
-
-                            {{-- Sentiment Analysis --}}
-                            @if(!empty($analysis['sentiment']))
-                                <div>
-                                    <p class="text-xs font-bold uppercase text-gray-400 tracking-wider mb-2 dark:text-indigo-200/80">Sentiment</p>
-                                    <div class="flex items-center gap-2">
-                                        @php
-                                            $sentimentIcon = match($analysis['sentiment']) {
-                                                'positive' => 'thumbs-up',
-                                                'negative' => 'thumbs-down',
-                                                'neutral' => 'minus',
-                                                default => 'help-circle'
-                                            };
-                                            $sentimentColor = match($analysis['sentiment']) {
-                                                'positive' => 'bg-green-100 text-green-600',
-                                                'negative' => 'bg-rose-100 text-rose-600',
-                                                'neutral' => 'bg-gray-100 text-gray-600',
-                                                default => 'bg-gray-100 text-gray-600'
-                                            };
-                                            $sentimentDarkClasses = match($analysis['sentiment']) {
-                                                'positive' => 'dark:bg-green-500/10 dark:text-green-200',
-                                                'negative' => 'dark:bg-rose-500/10 dark:text-rose-200',
-                                                'neutral' => 'dark:bg-gray-500/10 dark:text-gray-200',
-                                                default => 'dark:bg-gray-500/10 dark:text-gray-200'
-                                            };
-                                        @endphp
-                                        <div class="h-8 w-8 rounded-full {{ $sentimentColor }} {{ $sentimentDarkClasses }} flex items-center justify-center">
-                                            <i data-lucide="{{ $sentimentIcon }}" class="h-4 w-4"></i>
-                                        </div>
-                                        <div>
-                                            <p class="text-sm font-semibold text-gray-900 capitalize dark:text-gray-100">{{ $analysis['sentiment'] }}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-
-                            {{-- Analyzed At Timestamp --}}
-                            @if(!empty($analysis['analyzed_at']))
-                                <div class="pt-2 border-t border-gray-200 dark:border-indigo-500/20">
-                                    <p class="text-[11px] text-gray-400 dark:text-indigo-200/80">
-                                        Last analyzed:
-                                        {{ \Illuminate\Support\Carbon::parse($analysis['analyzed_at'])->format('M d, Y H:i') }}
-                                    </p>
-                                </div>
-                            @endif
-                        </div>
-                    @else
-                        <div class="text-center py-6">
-                            <i data-lucide="sparkles" class="h-8 w-8 mx-auto text-gray-300 mb-2"></i>
-                            <p class="text-sm text-gray-500 dark:text-gray-300">No AI analysis available for this entry yet.</p>
-                        </div>
-                    @endif
-                </div>
-            </div>
+       
 
             {{-- Signed Logsheet Download --}}
             <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 dark:bg-slate-900/80 dark:ring-white/10">
