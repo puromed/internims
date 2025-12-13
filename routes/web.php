@@ -30,6 +30,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->as('faculty.')
         ->group(function () {
             Volt::route('dashboard', 'faculty.dashboard')->name('dashboard');
+            Volt::route('students', 'faculty.students.index')->name('students.index');
             Volt::route('logbooks', 'faculty.logbooks.index')->name('logbooks.index');
             Volt::route('logbooks/{logbook}', 'faculty.logbooks.show')->name('logbooks.show');
         });

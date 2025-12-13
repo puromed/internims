@@ -68,10 +68,14 @@ new class extends Component {
         {{-- Quick Actions --}}
         <div class="rounded-2xl bg-white dark:bg-slate-900/80 shadow-sm ring-1 ring-gray-900/5 dark:ring-white/10 p-6">
             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
-            <div class="flex gap-4">
+            <div class="flex flex-wrap gap-4">
                 <a href="{{ route('faculty.logbooks.index') }}" wire:navigate class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-600">
                     <i data-lucide="book-open" class="mr-2 h-4 w-4"></i>
                     Review Logbooks
+                </a>
+                <a href="{{ route('faculty.students.index') }}" wire:navigate class="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700">
+                    <i data-lucide="users" class="mr-2 h-4 w-4"></i>
+                    View Students
                 </a>
             </div>
         </div>
