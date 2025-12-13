@@ -80,7 +80,7 @@ new class extends Component {
                     Logbook Verification
                 </h2>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Review weekly logbooks with AI-powered analysis and PDF verification.
+                    Review weekly logbooks and PDF verification.
                 </p>
             </div>
 
@@ -144,7 +144,7 @@ new class extends Component {
                                 'revision_requested' => ['label' => 'Revision requested', 'class' => 'bg-rose-100 text-rose-800'],
                             ][$status] ?? ['label' => ucfirst($status), 'class' => 'bg-gray-100 text-gray-700'];
 
-                            $analysis = $entry->ai_analysis_json ?? [];
+
                         @endphp
 
                         <div class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-3">
@@ -159,11 +159,7 @@ new class extends Component {
                                             • Submitted {{ $entry->submitted_at->diffForHumans() }}
                                         @endif
                                     </p>
-                                    @if(!empty($analysis['summary']))
-                                        <p class="mt-2 text-xs text-gray-600 dark:text-gray-300 line-clamp-2">
-                                            AI: {{ $analysis['summary'] }}
-                                        </p>
-                                    @endif
+
                                 </div>
 
                                 <div class="flex flex-col items-end gap-2">
