@@ -35,6 +35,8 @@ new class extends Component {
             'status' => 'approved',
         ])->save();
 
+        $this->logbook->user->notify(new \App\Notifications\LogbookEntryApprovedNotification($this->logbook));
+
         session()->flash('status', 'Logbook approved.');
         $this->dispatch('notify', message: 'Logbook approved.');
     }
@@ -54,6 +56,8 @@ new class extends Component {
             'reviewed_by' => auth()->id(),
             'status' => 'submitted', // re-open for student
         ])->save();
+
+        $this->logbook->user->notify(new \App\Notifications\LogbookEntryRevisionRequestedNotification($this->logbook));
 
         session()->flash('status', 'Revision requested.');
         $this->dispatch('notify', message: 'Revision requested from student.');
