@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\LogbookEntry;
+use App\Jobs\AnalyzeLogbookEntryJob;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
@@ -86,52 +87,40 @@ new class extends Component
             'week_number' => 'required|integer|min:1|max:24',
             'entry_text' => 'required|string|min:10',
         ]);
-
         // Get existing entry to preserve file_path if no new file is uploaded
         $existingEntry = LogbookEntry::where('user_id', Auth::id())
             ->where('week_number', $this->week_number)
             ->first();
-
         // Store file if present, otherwise preserve existing file_path
         $path = $this->entry_file
             ? $this->entry_file->store("logbooks/week-{$this->week_number}", 'public')
             : ($existingEntry?->file_path ?? null);
-
-        // Store Placeholder for AI analysis job
-        $aiAnalysis = [
-            'sentiment' => 'positive',
-            'skills_identified' => ['problem solving', 'teamwork', 'communication', 'technical skills'],
-            'summary' => 'This week, the intern demonstrated strong problem solving and teamwork skills while contributing to technical projects with effective communication.',
-            'analyzed_at' => now()->toISOString(),
-        ];
-
-        LogbookEntry::updateOrCreate(
+        // Create/update entry with pending AI status
+        $entry = LogbookEntry::updateOrCreate(
             ['user_id' => Auth::id(), 'week_number' => $this->week_number],
             [
                 'entry_text' => $this->entry_text,
                 'file_path' => $path,
-                'ai_analysis_json' => $aiAnalysis,
+                'ai_analysis_json' => ['status' => 'analyzing'], // Pending indicator
                 'status' => 'pending_review',
+                'submitted_at' => now(),
             ]
         );
-
+        // Dispatch AI analysis job to queue
+        AnalyzeLogbookEntryJob::dispatch($entry);
         // Notify faculty supervisor
         $supervisor = Auth::user()->internships()->latest()->first()?->facultySupervisor;
         if ($supervisor) {
-            $entry = LogbookEntry::where('user_id', Auth::id())
-                ->where('week_number', $this->week_number)
-                ->first();
             $supervisor->notify(new \App\Notifications\NewLogbookSubmittedNotification($entry));
         }
-
         $this->reset(['entry_text', 'entry_file']);
         $this->loadLogbooks();
         $this->week_number = ($this->logbooks[0]['week_number'] ?? 0) + 1;
         $this->refreshCurrentWeekEntry();
-        session()->flash('status', 'AI analysis  completed! Your logbook is now pending review');
-        $this->dispatch('notify', message: 'AI analysis queued (stub).');
+        
+        session()->flash('status', 'Logbook submitted! AI analysis is processing...');
+        $this->dispatch('notify', message: 'AI analysis queued.');
     }
-
     public function markStatus(int $id, string $status): void
     {
         $entry = LogbookEntry::where('user_id', Auth::id())->findOrFail($id);
