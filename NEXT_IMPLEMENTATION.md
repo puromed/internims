@@ -29,8 +29,20 @@ Close the feedback loop so interns and supervisors receive timely alerts when lo
   - Feature tests cover each notification type.
 
 ### Workstream 2 – Email (Mail) Delivery
-- **Configure Mail**
-  - Confirm `.env` mail driver (e.g., Mailtrap/SMTP) works locally and in staging.
+- **Configure Mail (Mailtrap Sandbox)**
+  - Use the shared sandbox at `sandbox.smtp.mailtrap.io` (free tier).
+  - Update `.env` with the generated credentials:
+    ```dotenv
+    MAIL_MAILER=smtp
+    MAIL_HOST=sandbox.smtp.mailtrap.io
+    MAIL_PORT=2525
+    MAIL_USERNAME=7bb939a3560b31   # replace with the current Mailtrap username
+    MAIL_PASSWORD=****5316        # replace with the current Mailtrap password
+    MAIL_ENCRYPTION=tls
+    MAIL_FROM_ADDRESS="internims@example.com"
+    MAIL_FROM_NAME="Internims"
+    ```
+  - Run `php artisan config:clear` after editing `.env`.
 - **Extend Notification Channels**
   - Add `mail` channel to the above notifications with concise subject/body.
   - Include supervisor comments in revision emails.
@@ -38,6 +50,7 @@ Close the feedback loop so interns and supervisors receive timely alerts when lo
   - Add boolean columns `notify_on_logbook_review`, `notify_on_logbook_submission` to `users` table or a settings table.
   - Honor preferences when dispatching notifications.
 - **Acceptance Criteria**
+  - Test send via `php artisan tinker` (e.g., dispatch a notification) and confirm the message appears inside the Mailtrap inbox.
   - Mailable previews render correctly (`php artisan notifications:table` not needed if already set).
   - Tests assert that notifications respect user preferences.
 

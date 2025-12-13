@@ -43,6 +43,8 @@
                 </flux:tooltip>
             </flux:navbar>
 
+            <livewire:notifications.bell />
+
             <!-- Desktop User Menu -->
             <flux:dropdown position="top" align="end">
                 <flux:profile

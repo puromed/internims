@@ -62,6 +62,15 @@ new class extends Component
             ]
         );
 
+        // Notify faculty supervisor
+        $supervisor = Auth::user()->internships()->latest()->first()?->facultySupervisor;
+        if ($supervisor) {
+            $entry = LogbookEntry::where('user_id', Auth::id())
+                ->where('week_number', $this->week_number)
+                ->first();
+            $supervisor->notify(new \App\Notifications\NewLogbookSubmittedNotification($entry));
+        }
+
         $this->reset(['entry_text', 'entry_file']);
         $this->loadLogbooks();
         $this->week_number = ($this->logbooks[0]['week_number'] ?? 0) + 1;
@@ -105,6 +114,15 @@ new class extends Component
                 'status' => 'pending_review',
             ]
         );
+
+        // Notify faculty supervisor
+        $supervisor = Auth::user()->internships()->latest()->first()?->facultySupervisor;
+        if ($supervisor) {
+            $entry = LogbookEntry::where('user_id', Auth::id())
+                ->where('week_number', $this->week_number)
+                ->first();
+            $supervisor->notify(new \App\Notifications\NewLogbookSubmittedNotification($entry));
+        }
 
         $this->reset(['entry_text', 'entry_file']);
         $this->loadLogbooks();
