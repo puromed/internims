@@ -13,9 +13,6 @@ $statusBg = [
 
 @foreach($actions as $action)
     @php
-        $href = !$action['locked'] && ($action['title'] === 'Upload Eligibility Documents')
-            ? route('eligibility.index')
-            : null;
         $href = null;
         if (!$action['locked']) {
             if ($action['title'] === 'Upload Eligibility Documents') {
