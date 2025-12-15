@@ -62,6 +62,16 @@
                 </flux:navlist.group>
             @else
                 {{-- Student Navigation --}}
+                @php
+                    $user = auth()->user();
+                    $requiredDocTypes = ['resume', 'transcript', 'offer_letter'];
+                    $eligibilityDocs = $user->eligibilityDocs()->get()->keyBy('type');
+                    $allDocsApproved = collect($requiredDocTypes)->every(fn($type) => ($eligibilityDocs[$type]->status ?? '') === 'approved');
+                    $hasInternship = $user->internships()->exists();
+                    
+                    $placementLocked = !$allDocsApproved;
+                    $logbookLocked = !$hasInternship;
+                @endphp
                 <flux:navlist.group :heading="__('Internship')" class="grid">
                     <flux:navlist.item :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         <x-slot:icon><i data-lucide="layout-dashboard" class="size-5"></i></x-slot:icon>
@@ -71,14 +81,40 @@
                         <x-slot:icon><i data-lucide="file-check" class="size-5"></i></x-slot:icon>
                         {{ __('Eligibility Docs') }}
                     </flux:navlist.item>
-                    <flux:navlist.item :href="route('placement.index')" :current="request()->routeIs('placement.index')" wire:navigate>
-                        <x-slot:icon><i data-lucide="briefcase" class="size-5"></i></x-slot:icon>
-                        {{ __('My Placement') }}
-                    </flux:navlist.item>
-                    <flux:navlist.item :href="route('logbooks.index')" :current="request()->routeIs('logbooks.index')" wire:navigate>
-                        <x-slot:icon><i data-lucide="book-open" class="size-5"></i></x-slot:icon>
-                        {{ __('Weekly Logbooks') }}
-                    </flux:navlist.item>
+                    
+                    @if($placementLocked)
+                        <div class="flex items-center justify-between px-3 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="briefcase" class="size-5"></i>
+                                <span>{{ __('My Placement') }}</span>
+                            </div>
+                            <span class="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                <i data-lucide="lock" class="size-3"></i>
+                            </span>
+                        </div>
+                    @else
+                        <flux:navlist.item :href="route('placement.index')" :current="request()->routeIs('placement.index')" wire:navigate>
+                            <x-slot:icon><i data-lucide="briefcase" class="size-5"></i></x-slot:icon>
+                            {{ __('My Placement') }}
+                        </flux:navlist.item>
+                    @endif
+                    
+                    @if($logbookLocked)
+                        <div class="flex items-center justify-between px-3 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="book-open" class="size-5"></i>
+                                <span>{{ __('Weekly Logbooks') }}</span>
+                            </div>
+                            <span class="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                <i data-lucide="lock" class="size-3"></i>
+                            </span>
+                        </div>
+                    @else
+                        <flux:navlist.item :href="route('logbooks.index')" :current="request()->routeIs('logbooks.index')" wire:navigate>
+                            <x-slot:icon><i data-lucide="book-open" class="size-5"></i></x-slot:icon>
+                            {{ __('Weekly Logbooks') }}
+                        </flux:navlist.item>
+                    @endif
             </flux:navlist.group>
         @endif
     </flux:navlist>

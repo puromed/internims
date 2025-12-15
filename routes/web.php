@@ -20,9 +20,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Student routes
     Volt::route('dashboard', 'dashboard')->name('dashboard');
     Volt::route('eligibility', 'eligibility.index')->name('eligibility.index');
-    Volt::route('placement', 'placement.index')->name('placement.index');
-    Volt::route('logbooks', 'logbooks.index')->name('logbooks.index');
-    Volt::route('logbooks/{logbook}', 'logbooks.show')->name('logbooks.show');
+    
+    // Placement requires all eligibility docs to be approved
+    Volt::route('placement', 'placement.index')
+        ->middleware(\App\Http\Middleware\EnsureEligibilityCompleted::class)
+        ->name('placement.index');
+    
+    // Logbooks require internship to exist
+    Volt::route('logbooks', 'logbooks.index')
+        ->middleware(\App\Http\Middleware\EnsureInternshipExists::class)
+        ->name('logbooks.index');
+    Volt::route('logbooks/{logbook}', 'logbooks.show')
+        ->middleware(\App\Http\Middleware\EnsureInternshipExists::class)
+        ->name('logbooks.show');
 
     // Admin routes
     Route::middleware('role:admin')
