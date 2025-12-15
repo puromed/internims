@@ -85,6 +85,11 @@ class FortifyServiceProvider extends ServiceProvider
                 {
                     $user = $request->user();
 
+                    // Redirect admin users to admin dashboard
+                    if ($user->isAdmin()) {
+                        return redirect()->intended(route('admin.dashboard'));
+                    }
+
                     // Redirect faculty users to faculty dashboard
                     if ($user->isFaculty() || $user->isAdmin()) {
                         return redirect()->intended(route('faculty.dashboard'));
@@ -92,6 +97,7 @@ class FortifyServiceProvider extends ServiceProvider
 
                     // Redirect students to student dashboard
                     return redirect()->intended(route('dashboard'));
+
                 }
             };
         });
@@ -103,6 +109,11 @@ class FortifyServiceProvider extends ServiceProvider
                 {
                     $user = $request->user();
 
+                    // Redirect admin users to admin dashboard
+                    if ($user->isAdmin()) {
+                        return redirect()->intended(route('admin.dashboard'));
+                    }
+
                     // Redirect faculty users to faculty dashboard
                     if ($user->isFaculty() || $user->isAdmin()) {
                         return redirect()->intended(route('faculty.dashboard'));
@@ -110,6 +121,7 @@ class FortifyServiceProvider extends ServiceProvider
 
                     // Redirect students to student dashboard
                     return redirect()->intended(route('dashboard'));
+
                 }
             };
         });

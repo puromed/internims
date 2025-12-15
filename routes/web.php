@@ -24,6 +24,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Volt::route('logbooks', 'logbooks.index')->name('logbooks.index');
     Volt::route('logbooks/{logbook}', 'logbooks.show')->name('logbooks.show');
 
+    // Admin routes
+    Route::middleware('role:admin')
+        ->prefix('admin')
+        ->as('admin.')
+        ->group(function () {
+            Volt::route('dashboard', 'admin.dashboard')->name('dashboard');
+            Volt::route('eligibility', 'admin.eligibility.index')->name('eligibility.index');
+            Volt::route('companies', 'admin.companies.index')->name('companies.index');
+            Volt::route('users', 'admin.users.index')->name('users.index');
+            Volt::route('assignments', 'admin.assignments.index')->name('assignments.index');
+        });
+
     // Faculty routes
     Route::middleware('role:faculty,admin')
         ->prefix('faculty')

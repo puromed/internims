@@ -49,8 +49,8 @@ new class extends Component {
 <div class="space-y-8">
     {{-- Header --}}
     <div>
-        <h2 class="text-3xl font-bold text-gray-900">Eligibility Verification</h2>
-        <p class="mt-1 text-sm text-gray-500">Stage 1: Upload all required documents to unlock internship features.</p>
+        <flux:heading size="xl">Eligibility Verification</flux:heading>
+        <flux:subheading>Stage 1: Upload all required documents to unlock internship features.</flux:subheading>
     </div>
 
     {{-- Progress --}}
@@ -59,28 +59,28 @@ new class extends Component {
         $total = count($requiredTypes);
         $pct = $total ? intval(($approved / $total) * 100) : 0;
     @endphp
-    <div class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-4 flex items-center justify-between">
-        <div class="w-full">
-            <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
-                <span>Document Progress</span>
-                <span class="font-semibold text-indigo-600">{{ $pct }}%</span>
-            </div>
-            <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
-                <div class="h-full bg-indigo-500" style="width: {{ $pct }}%"></div>
-            </div>
+    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
+        <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <span>Document Progress</span>
+            <span class="font-semibold text-indigo-600 dark:text-indigo-400">{{ $pct }}%</span>
         </div>
-        <div class="ml-6 inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
-            {{ $approved }} of {{ $total }} Complete
+        <div class="h-2 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
+            <div class="h-full bg-indigo-600 dark:bg-indigo-500 transition-all duration-500" style="width: {{ $pct }}%"></div>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <div class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-800/50">
+                <span>{{ $approved }} of {{ $total }} Approved</span>
+            </div>
         </div>
     </div>
 
     {{-- Cards --}}
     @php
         $statusMap = [
-            'approved' => ['label' => 'Uploaded', 'class' => 'border-green-200 bg-green-50 text-green-700', 'icon' => 'check-circle-2'],
-            'pending'  => ['label' => 'Submitted', 'class' => 'border-amber-200 bg-amber-50 text-amber-700', 'icon' => 'clock'],
-            'rejected' => ['label' => 'Rejected', 'class' => 'border-rose-200 bg-rose-50 text-rose-700', 'icon' => 'alert-triangle'],
-            'missing'  => ['label' => 'Not Submitted', 'class' => 'border-gray-200 bg-gray-50 text-gray-600', 'icon' => 'upload-cloud'],
+            'approved' => ['label' => 'Uploaded', 'color' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300', 'icon' => 'check-circle'],
+            'pending'  => ['label' => 'Submitted', 'color' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300', 'icon' => 'clock'],
+            'rejected' => ['label' => 'Rejected', 'color' => 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300', 'icon' => 'exclamation-circle'],
+            'missing'  => ['label' => 'Not Submitted', 'color' => 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-gray-400', 'icon' => 'cloud-arrow-up'],
         ];
     @endphp
     <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -91,21 +91,19 @@ new class extends Component {
                 $map = $statusMap[$status];
                 $label = \Illuminate\Support\Str::of($type)->replace('_',' ')->title();
             @endphp
-            <div class="relative rounded-2xl border {{ $map['class'] }} bg-white/70 p-6 shadow-sm">
-                <div class="flex items-start justify-between">
+            <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
+                <div class="flex items-start justify-between mb-4">
                     <div>
-                        <div class="flex items-center gap-2 text-sm font-semibold text-gray-900">
-                            <i data-lucide="{{ $map['icon'] }}" class="h-4 w-4 {{ $map['class'] }}"></i>
-                            {{ $label }}
-                        </div>
-                        <p class="mt-1 text-xs uppercase tracking-wide text-gray-500">Format: PDF • Max: 5MB</p>
+                        <flux:heading size="lg">{{ $label }}</flux:heading>
+                        <flux:subheading class="text-xs uppercase tracking-wide">Format: PDF • Max: 5MB</flux:subheading>
                     </div>
-                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset {{ $map['class'] }}">
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold {{ $map['color'] }}">
+                        <flux:icon name="{{ $map['icon'] }}" class="size-3.5" />
                         {{ $map['label'] }}
                     </span>
                 </div>
 
-                <p class="mt-4 text-sm text-gray-600">
+                <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
                     @if($status === 'missing')
                         Your {{ strtolower($label) }} is required to complete Stage 1.
                     @elseif($status === 'pending')
@@ -117,41 +115,38 @@ new class extends Component {
                     @endif
                 </p>
 
-                <div class="mt-4 border-2 border-dashed border-gray-200 rounded-xl p-4 bg-white">
-                    @if($doc && $doc['path'])
-                        <div class="flex items-center justify-between text-sm text-gray-700">
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="file" class="h-4 w-4 text-gray-500"></i>
-                                <span class="font-medium">{{ basename($doc['path']) }}</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <a href="{{ Storage::disk('public')->url($doc['path']) }}" target="_blank" class="text-indigo-600 hover:text-indigo-700 text-sm">View</a>
-                                <button wire:click="uploadDoc('{{ $type }}')" class="text-rose-600 hover:text-rose-700 text-sm">Replace</button>
-                            </div>
+                @if($doc && $doc['path'])
+                    <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 flex items-center justify-between dark:border-zinc-700 dark:bg-zinc-800/50">
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <flux:icon name="document" class="size-4 text-gray-400" />
+                            <span class="truncate text-sm font-medium text-gray-700 dark:text-gray-300">{{ basename($doc['path']) }}</span>
                         </div>
-                    @endif
-                    <div class="mt-3 flex items-center gap-3">
-                        <input type="file" wire:model="uploads.{{ $type }}" class="text-sm text-gray-600">
-                        <button wire:click="uploadDoc('{{ $type }}')" class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
-                            {{ $doc ? 'Replace' : 'Click to Upload' }}
-                        </button>
+                        <a href="{{ Storage::disk('public')->url($doc['path']) }}" target="_blank" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">View</a>
                     </div>
+                @endif
+
+                <div class="flex flex-col gap-3">
+                    <input type="file" wire:model="uploads.{{ $type }}" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:text-gray-400 dark:file:bg-indigo-900/30 dark:file:text-indigo-400 cursor-pointer"/>
+                    
+                    <flux:button wire:click="uploadDoc('{{ $type }}')" class="w-full" :disabled="!isset($uploads[$type])">
+                        {{ $doc ? 'Replace Document' : 'Upload Document' }}
+                    </flux:button>
                 </div>
             </div>
         @endforeach
     </div>
 
     {{-- Guidelines --}}
-    <div class="rounded-2xl bg-indigo-50 border border-indigo-100 p-6 shadow-sm">
-        <div class="flex items-center gap-2 text-indigo-800 font-semibold mb-3">
-            <i data-lucide="info" class="h-5 w-5"></i>
+    <div class="rounded-xl border border-indigo-100 bg-indigo-50 p-6 shadow-sm dark:border-indigo-900/50 dark:bg-indigo-950/20">
+        <div class="flex items-center gap-2 text-indigo-800 dark:text-indigo-300 font-semibold mb-3">
+            <flux:icon name="information-circle" class="size-5" />
             Document Guidelines
         </div>
-        <ul class="space-y-2 text-sm text-indigo-900/90">
-            <li class="flex items-start gap-2"><i data-lucide="check" class="h-4 w-4 mt-0.5"></i> All documents must be in PDF format</li>
-            <li class="flex items-start gap-2"><i data-lucide="check" class="h-4 w-4 mt-0.5"></i> Maximum file size is 5MB per document</li>
-            <li class="flex items-start gap-2"><i data-lucide="check" class="h-4 w-4 mt-0.5"></i> Transcript must be an official copy</li>
-            <li class="flex items-start gap-2"><i data-lucide="check" class="h-4 w-4 mt-0.5"></i> Processing takes 2–3 business days after all documents are uploaded</li>
+        <ul class="space-y-2 text-sm text-indigo-900/90 dark:text-indigo-200/80">
+            <li class="flex items-start gap-2"><flux:icon name="check" class="size-4 mt-0.5" /> All documents must be in PDF format</li>
+            <li class="flex items-start gap-2"><flux:icon name="check" class="size-4 mt-0.5" /> Maximum file size is 5MB per document</li>
+            <li class="flex items-start gap-2"><flux:icon name="check" class="size-4 mt-0.5" /> Transcript must be an official copy</li>
+            <li class="flex items-start gap-2"><flux:icon name="check" class="size-4 mt-0.5" /> Processing takes 2–3 business days after all documents are uploaded</li>
         </ul>
     </div>
 </div>
