@@ -15,10 +15,17 @@ class Application extends Model
         'position',
         'status',
         'submitted_at',
+        'eligibility_status',
+        'eligibility_reviewed_at',
+        'eligibility_reviewed_by',
+        'resume_path',
+        'transcript_path',
+        'advisor_letter_path',
     ];
 
     protected $casts = [
         'submitted_at' => 'datetime',
+        'eligibility_reviewed_at' => 'datetime',
     ];
 
     public function user()
@@ -29,5 +36,10 @@ class Application extends Model
     public function internship()
     {
         return $this->hasOne(Internship::class);
+    }
+
+    public function proposedCompanies()
+    {
+        return $this->hasMany(ProposedCompany::class);
     }
 }

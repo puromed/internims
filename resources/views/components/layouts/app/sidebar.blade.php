@@ -7,12 +7,48 @@
         <flux:sidebar sticky stashable class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
-            <a href="{{ auth()->user()->isFaculty() ? route('faculty.dashboard') : route('dashboard') }}" class="me-5 flex items-center space-x-2 rtl:space-x-reverse" wire:navigate>
+            <a href="{{ auth()->user()->isAdmin() ? route('admin.dashboard') : (auth()->user()->isFaculty() ? route('faculty.dashboard') : route('dashboard')) }}" class="me-5 flex items-center space-x-2 rtl:space-x-reverse" wire:navigate>
                 <x-app-logo />
             </a>
 
            <flux:navlist variant="outline">
-            @if(auth()->user()->isFaculty() || auth()->user()->isAdmin())
+            @if(auth()->user()->isAdmin())
+                {{-- Admin Navigation --}}
+                <flux:navlist.group :heading="__('Admin')" class="grid">
+                    <flux:navlist.item :href="route('admin.dashboard')" :current="request()->routeIs('admin.dashboard')" wire:navigate>
+                        <x-slot:icon><i data-lucide="layout-dashboard" class="size-5"></i></x-slot:icon>
+                        {{ __('Dashboard') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item :href="route('admin.eligibility.index')" :current="request()->routeIs('admin.eligibility.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="file-check" class="size-5"></i></x-slot:icon>
+                        {{ __('Eligibility Review') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item :href="route('admin.companies.index')" :current="request()->routeIs('admin.companies.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="building-2" class="size-5"></i></x-slot:icon>
+                        {{ __('Company Proposals') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item :href="route('admin.users.index')" :current="request()->routeIs('admin.users.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="users" class="size-5"></i></x-slot:icon>
+                        {{ __('User Management') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item :href="route('admin.assignments.index')" :current="request()->routeIs('admin.assignments.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="user-plus" class="size-5"></i></x-slot:icon>
+                        {{ __('Faculty Assignments') }}
+                    </flux:navlist.item>
+                </flux:navlist.group>
+
+                {{-- Admin can also access Faculty features --}}
+                <flux:navlist.group :heading="__('Faculty Tools')" class="grid">
+                    <flux:navlist.item :href="route('faculty.dashboard')" :current="request()->routeIs('faculty.dashboard')" wire:navigate>
+                        <x-slot:icon><i data-lucide="briefcase" class="size-5"></i></x-slot:icon>
+                        {{ __('Faculty Dashboard') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item :href="route('faculty.logbooks.index')" :current="request()->routeIs('faculty.logbooks.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="book-open" class="size-5"></i></x-slot:icon>
+                        {{ __('Student Logbooks') }}
+                    </flux:navlist.item>
+                </flux:navlist.group>
+            @elseif(auth()->user()->isFaculty())
                 {{-- Faculty Navigation --}}
                 <flux:navlist.group :heading="__('Faculty')" class="grid">
                     <flux:navlist.item :href="route('faculty.dashboard')" :current="request()->routeIs('faculty.dashboard')" wire:navigate>

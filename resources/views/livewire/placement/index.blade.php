@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Application;
+use App\Models\ProposedCompany;
 use App\Models\Internship;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
@@ -8,23 +9,70 @@ use Livewire\Volt\Component;
 new class extends Component {
     public ?Application $application = null;
     public ?Internship $internship = null;
-
-    public string $company_name = '';
-    public string $position = '';
- 
+    public array $proposals = [
+        ['name' => '', 'website' => '', 'address' => '', 'job_scope' => ''],
+        ['name' => '', 'website' => '', 'address' => '', 'job_scope' => ''],
+    ];
     public function mount(): void
     {
         $user = Auth::user();
         $this->application = $user->applications()->latest()->first();
-        $this->internship  = $user->internships()->latest()->first();
-
+        $this->internship  = $this->application?->internship()->first();
+        // Load existing proposals if application exists
         if ($this->application) {
-            $this->company_name = $this->application->company_name ?? '';
-            $this->position     = $this->application->position ?? '';
+            $existingProposals = $this->application->proposedCompanies()->get();
+            if ($existingProposals->count() > 0) {
+                // Pre-fill from database
+                $this->proposals = $existingProposals->map(fn ($p) => [
+                    'id'        => $p->id,
+                    'name'      => $p->name,
+                    'website'   => $p->website ?? '',
+                    'address'   => $p->address ?? '',
+                    'job_scope' => $p->job_scope,
+                    'status'    => $p->status,
+                ])->toArray();
+            }
+        }
+    }
+
+    public function confirmPlacement(int $proposalId): void
+    {
+        $application = $this->application;
+
+        if (! $application) {
+            $this->addError('confirm', 'No application found');
+            return;
         }
 
-        // Sync internship if application is approved
-        $this->syncInternshipFromApplication();
+        if ($application->internship()->exists()){
+            $this->addError('confirm', 'You have already confirmed your placement');
+            return;
+        }
+
+        $proposal = $application->proposedCompanies()
+            ->whereKey($proposalId)
+            ->where('status', 'approved')
+            ->first();
+
+        if (! $proposal) {
+            $this->addError('confirm', 'That company is not approved');
+            return;
+        }
+
+        $application->forceFill([
+            'status' => 'approved',
+            'company_name' => $proposal->name,
+        ])->save();
+
+        $application->internship()->create([
+            'user_id' => Auth::id(),
+            'company_name' => $proposal->name,
+            'status' => 'pending',
+            'start_date' => now()->addWeeks(2),
+        ]);
+
+        $this->mount();
+        $this->dispatch('start-toast', message: 'Placement confirmed successfully.');
     }
 
     protected function syncInternshipFromApplication(): void
@@ -46,103 +94,249 @@ new class extends Component {
 
     public function submit(): void
     {
-        $data = $this->validate([
-            'company_name' => 'required|string|max:255',
-            'position'     => 'required|string|max:255',
+        $this->validate([
+            'proposals'              => 'required|array|size:2',
+            'proposals.*.name'       => 'required|string|max:255',
+            'proposals.*.job_scope'  => 'required|string|max:1000',
+            'proposals.*.website'    => 'nullable|url|max:255',
+            'proposals.*.address'    => 'nullable|string|max:500',
+        ], [
+            'proposals.*.name.required'      => 'Company name is required.',
+            'proposals.*.job_scope.required' => 'Job scope is required.',
         ]);
-
+        // Create or update application
         $this->application = Application::updateOrCreate(
             ['user_id' => Auth::id()],
-            array_merge($data, ['status' => 'submitted', 'submitted_at' => now()])
+            ['status' => 'submitted', 'submitted_at' => now()]
         );
 
-        session()->flash('status', 'Placement submitted for approval.');
-        $this->dispatch('notify', message: 'Placement submitted.');
+        foreach ($this->proposals as $proposalData) {
+            $data = [
+                'name'      => $proposalData['name'],
+                'website'   => $proposalData['website'] ?? null,
+                'address'   => $proposalData['address'] ?? null,
+                'job_scope' => $proposalData['job_scope'],
+                'status'    => 'pending',
+                'admin_remarks' => null,
+            ];
+
+            if (isset($proposalData['id'])) {
+                ProposedCompany::where('id', $proposalData['id'])->update($data);
+            } else {
+                $this->application->proposedCompanies()->create($data);
+            }
+        }
+
+        // Refresh state
+        $this->mount();
+        
+        $this->dispatch('start-toast', message: 'Placement proposals submitted successfully.');
     }
 }; ?>
 
 <div class="space-y-8">
     <div>
-        <h2 class="text-3xl font-bold text-gray-900">Placement</h2>
-        <p class="mt-1 text-sm text-gray-500">Submit your placement details and track approval.</p>
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Placement</h2>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Submit your placement details and track approval.</p>
     </div>
 
     @php
         $status = $internship?->status ?? $application?->status ?? 'draft';
         $statusMap = [
-            'draft'     => ['label' => 'Draft',     'class' => 'bg-gray-100 text-gray-700'],
-            'submitted' => ['label' => 'Submitted', 'class' => 'bg-amber-100 text-amber-800'],
-            'approved'  => ['label' => 'Approved',  'class' => 'bg-green-100 text-green-800'],
-            'rejected'  => ['label' => 'Rejected',  'class' => 'bg-rose-100 text-rose-800'],
-            'pending'   => ['label' => 'Pending',   'class' => 'bg-amber-100 text-amber-800'],
+            'draft'     => ['label' => 'Draft',     'color' => 'bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-gray-300', 'icon' => 'pencil'],
+            'submitted' => ['label' => 'Submitted', 'color' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200', 'icon' => 'clock'],
+            'approved'  => ['label' => 'Approved',  'color' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200', 'icon' => 'check-circle'],
+            'rejected'  => ['label' => 'Rejected',  'color' => 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200', 'icon' => 'x-circle'],
+            'pending'   => ['label' => 'Pending',   'color' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200', 'icon' => 'clock'],
         ];
         $stat = $statusMap[$status] ?? $statusMap['draft'];
     @endphp
 
-    <div class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-6 flex items-center justify-between">
+    <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
         <div>
-            <p class="text-sm text-gray-500">Current Status</p>
-            <p class="text-xl font-semibold text-gray-900 capitalize">{{ $status }}</p>
-            @if($internship)
-                <p class="text-sm text-gray-500 mt-1">Supervisor: {{ $internship->supervisor_name ?? 'TBD' }}</p>
-                <p class="text-sm text-gray-500">Company: {{ $internship->company_name ?? $application?->company_name ?? '—' }}</p>
-            @endif
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Status</p>
+            <div class="mt-1">
+                <p class="text-xl font-bold text-gray-900 dark:text-white capitalize">{{ $status }}</p>
+                @if($internship)
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Supervisor: {{ $internship->supervisor_name ?? 'TBD' }}</p>
+                @endif
+            </div>
         </div>
-        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $stat['class'] }}">
+        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium {{ $stat['color'] }}">
+            <flux:icon name="{{ $stat['icon'] }}" class="size-4" />
             {{ $stat['label'] }}
         </span>
     </div>
 
-    @if($application && $application->status === 'submitted' && !$internship)
-        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <div class="flex items-center gap-2">
-                <i data-lucide="clock" class="h-4 w-4"></i>
+    @php
+        $approvedProposals = collect($proposals)
+            ->filter(fn (array $proposal): bool => ($proposal['status'] ?? null) === 'approved')
+            ->values();
+
+        $canConfirmPlacement = $application && ! $internship && $approvedProposals->isNotEmpty();
+    @endphp
+
+    @if($canConfirmPlacement)
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900/40 dark:bg-emerald-950/30">
+            <div class="flex items-start justify-between gap-4">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <flux:icon name="check-circle" class="size-5 text-emerald-600 dark:text-emerald-300" />
+                        <h3 class="text-base font-semibold text-emerald-900 dark:text-emerald-100">Confirm Placement</h3>
+                    </div>
+                    <p class="text-sm text-emerald-800/90 dark:text-emerald-200/90">
+                        An admin approved {{ $approvedProposals->count() > 1 ? 'multiple companies' : 'a company' }}. Confirm your final choice to create your internship record and unlock logbooks.
+                    </p>
+
+                    @error('confirm')
+                        <p class="text-sm font-medium text-rose-700 dark:text-rose-300">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="mt-4 space-y-3">
+                @foreach($approvedProposals as $approvedProposal)
+                    <div
+                        wire:key="approved-proposal-{{ $approvedProposal['id'] ?? $loop->index }}"
+                        class="flex items-center justify-between gap-4 rounded-lg bg-white p-4 ring-1 ring-emerald-200/60 dark:bg-zinc-900 dark:ring-emerald-900/40"
+                    >
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $approvedProposal['name'] ?? 'Approved company' }}</p>
+                            @if(! empty($approvedProposal['website']))
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $approvedProposal['website'] }}</p>
+                            @endif
+                        </div>
+
+                        @if(! empty($approvedProposal['id']))
+                            <flux:button
+                                variant="primary"
+                                wire:click="confirmPlacement({{ (int) $approvedProposal['id'] }})"
+                                wire:loading.attr="disabled"
+                                wire:target="confirmPlacement({{ (int) $approvedProposal['id'] }})"
+                            >
+                                Confirm
+                            </flux:button>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    @if($application && $application->status === 'submitted' && ! $internship && $approvedProposals->isEmpty())
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+            <div class="flex items-start gap-3">
+                <flux:icon name="clock" class="mt-0.5 size-5 shrink-0" />
                 <span><strong>Pending Approval:</strong> Your placement is under review. You'll be notified once it's approved and you can start submitting logbooks.</span>
             </div>
         </div>
     @endif
 
-    <div class="grid gap-6 lg:grid-cols-2">
-        <div class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900">Placement Details</h3>
-            <p class="text-sm text-gray-500 mb-4">Submit your placement to unlock logbooks.</p>
+    <div class="space-y-6">
+        @foreach($proposals as $index => $proposal)
+            <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Company Choice {{ $index + 1 }}</h3>
+                    @if(isset($proposal['status']) && $proposal['status'] !== 'pending')
+                        @php
+                            $pStat = match($proposal['status']) {
+                                'approved' => ['label' => 'Approved', 'color' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200', 'icon' => 'check-circle'],
+                                'rejected' => ['label' => 'Rejected', 'color' => 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200', 'icon' => 'x-circle'],
+                                default => ['label' => 'Pending', 'color' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200', 'icon' => 'clock'],
+                            };
+                        @endphp
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold {{ $pStat['color'] }}">
+                            <flux:icon name="{{ $pStat['icon'] }}" class="size-3.5" />
+                            {{ $pStat['label'] }}
+                        </span>
+                    @endif
+                </div>
 
-            <div class="space-y-4">
-                <div>
-                    <label class="text-sm font-medium text-gray-700">Company Name</label>
-                    <input type="text" wire:model.defer="company_name"
-                        {{ ($application && $application->status === 'submitted' && !$internship) ? 'disabled' : '' }}
-                        class="mt-1 block w-full rounded-lg border border-gray-200 bg-white text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
-                    @error('company_name')
-                        <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div>
-                    <label class="text-sm font-medium text-gray-700">Position</label>
-                    <input type="text" wire:model.defer="position"
-                        {{ ($application && $application->status === 'submitted' && !$internship) ? 'disabled' : '' }}
-                        class="mt-1 block w-full rounded-lg border border-gray-200 bg-white text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
-                    @error('position')
-                        <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div class="flex justify-end">
-                    <button wire:click="submit"
-                        {{ ($application && $application->status === 'submitted' && !$internship) ? 'disabled' : '' }}
-                        class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                        {{ ($application && $application->status === 'submitted' && !$internship) ? 'Pending Approval' : 'Submit placement' }}
-                    </button>
+                @php
+                    // Proposal is locked if it's already pending or approved. 
+                    // It is unlocked (editable) only if it's new (no status) or rejected.
+                    $pStatus = $proposal['status'] ?? 'new';
+                    $isProposalLocked = in_array($pStatus, ['pending', 'approved']);
+                    
+                    // However, if the entire application is NOT submitted yet (draft), everything is editable.
+                    // But here application status is likely 'submitted'.
+                    // So we rely on proposal status.
+                    if (!$application || $application->status === 'draft') {
+                        $isProposalLocked = false;
+                    }
+                @endphp
+
+                <div class="grid gap-6 md:grid-cols-2">
+                    {{-- Company Name --}}
+                    <flux:input 
+                        wire:model="proposals.{{ $index }}.name" 
+                        label="Company Name" 
+                        placeholder="e.g. Tech Solutions Inc."
+                        :disabled="$isProposalLocked"
+                    />
+
+                    {{-- Website --}}
+                    <flux:input 
+                        wire:model="proposals.{{ $index }}.website" 
+                        label="Website" 
+                        placeholder="https://example.com"
+                        type="url"
+                        :disabled="$isProposalLocked"
+                    />
+
+                    {{-- Address --}}
+                    <div class="md:col-span-2">
+                        <flux:input 
+                            wire:model="proposals.{{ $index }}.address" 
+                            label="Address" 
+                            placeholder="Full company address"
+                            :disabled="$isProposalLocked"
+                        />
+                    </div>
+
+                    {{-- Job Scope --}}
+                    <div class="md:col-span-2">
+                        <flux:textarea 
+                            wire:model="proposals.{{ $index }}.job_scope" 
+                            label="Job Scope / Description" 
+                            placeholder="Describe the role, responsibilities, and how it relates to your field of study..."
+                            rows="4"
+                            :disabled="$isProposalLocked"
+                        />
+                    </div>
                 </div>
             </div>
-        </div>
+        @endforeach
 
-        <div class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900">Summary</h3>
-            <div class="mt-4 space-y-2 text-sm text-gray-700">
-                <div class="flex justify-between"><span>Company</span><span class="font-semibold">{{ $application?->company_name ?? '—' }}</span></div>
-                <div class="flex justify-between"><span>Position</span><span class="font-semibold">{{ $application?->position ?? '—' }}</span></div>
-                <div class="flex justify-between"><span>Submitted</span><span>{{ optional($application?->submitted_at)->diffForHumans() ?? '—' }}</span></div>
-            </div>
+        {{-- Submit Button --}}
+        <div class="flex justify-end">
+            @php
+                // Check if ANY proposal is editable (i.e., not locked)
+                $anyEditable = false;
+                foreach($proposals as $p) {
+                    $pStat = $p['status'] ?? 'new';
+                    if (!in_array($pStat, ['pending', 'approved'])) {
+                        $anyEditable = true;
+                        break;
+                    }
+                }
+                
+                // If application is draft, it's editable
+                if (!$application || $application->status === 'draft') {
+                    $anyEditable = true;
+                }
+                
+                // Disable if nothing to edit
+                $isDisabled = !$anyEditable;
+            @endphp
+            <flux:button 
+                wire:click="submit" 
+                variant="primary" 
+                class="w-full sm:w-auto"
+                :disabled="$isDisabled"
+            >
+                {{ $isDisabled ? 'Awaiting Review' : 'Submit Proposals' }}
+            </flux:button>
         </div>
     </div>
 </div>
