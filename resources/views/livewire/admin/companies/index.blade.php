@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ProposedCompany;
+use App\Notifications\ProposedCompanyStatusNotification;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -17,11 +18,27 @@ new class extends Component {
 
     public function approve(int $proposalId): void
     {
-        $proposal = ProposedCompany::findOrFail($proposalId);
+        $proposal = ProposedCompany::query()
+            ->with('application.user')
+            ->findOrFail($proposalId);
+        $previousStatus = $proposal->status;
+
         $proposal->update([
             'status' => 'approved',
             'admin_remarks' => null,
         ]);
+
+        if ($previousStatus !== 'approved') {
+            $student = $proposal->application?->user;
+
+            if ($student) {
+                $student->notify(new ProposedCompanyStatusNotification(
+                    proposal: $proposal,
+                    status: 'approved',
+                    remark: null,
+                ));
+            }
+        }
 
         $this->dispatch('start-toast', message: 'Company proposal approved.');
     }
@@ -35,13 +52,34 @@ new class extends Component {
 
     public function confirmReject(): void
     {
-        if (!$this->rejectingProposalId) return;
+        if (! $this->rejectingProposalId) {
+            return;
+        }
 
-        $proposal = ProposedCompany::findOrFail($this->rejectingProposalId);
+        $proposal = ProposedCompany::query()
+            ->with('application.user')
+            ->findOrFail($this->rejectingProposalId);
+
+        $previousStatus = $proposal->status;    
+
         $proposal->update([
             'status' => 'rejected',
             'admin_remarks' => $this->adminRemarks ?: null,
         ]);
+
+        if ($previousStatus !== 'rejected') {
+            $student = $proposal->application?->user;
+
+            if ($student) {
+                $student->notify(new ProposedCompanyStatusNotification(
+                    proposal: $proposal,
+                    status: 'rejected',
+                    remark: $proposal->admin_remarks,
+                ));
+            }
+        }
+
+       
 
         $this->showRemarksModal = false;
         $this->rejectingProposalId = null;
