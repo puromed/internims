@@ -7,10 +7,17 @@ use Livewire\WithPagination;
 new class extends Component {
     use WithPagination;
 
-    public string $search = '';
-    public string $roleFilter = 'all';
+    public string $search = "";
+    public string $roleFilter = "all";
     public ?int $editingUserId = null;
-    public string $editingRole = '';
+    public string $editingRole = "";
+
+    public bool $showCreateUserModal = false;
+    public string $createName = "";
+    public string $createEmail = "";
+    public string $createRole = "faculty";
+    public string $createPassword = "";
+    public string $createPasswordConfirmation = "";
 
     public function updatedSearch(): void
     {
@@ -31,26 +38,102 @@ new class extends Component {
     public function cancelEditing(): void
     {
         $this->editingUserId = null;
-        $this->editingRole = '';
+        $this->editingRole = "";
+    }
+
+    public function openCreateUserModal(): void
+    {
+        $this->resetCreateUserForm();
+        $this->showCreateUserModal = true;
+    }
+
+    public function closeCreateUserModal(): void
+    {
+        $this->showCreateUserModal = false;
+        $this->resetCreateUserForm();
+    }
+
+    public function createUser(): void
+    {
+        if (!auth()->user()?->isAdmin()) {
+            abort(403);
+        }
+
+        $validated = $this->validate(
+            [
+                "createName" => ["required", "string", "max:255"],
+                "createEmail" => [
+                    "required",
+                    "email",
+                    "max:255",
+                    "unique:users,email",
+                ],
+                "createRole" => ["required", "in:faculty,admin"],
+                "createPassword" => ["required", "string", "min:8"],
+                "createPasswordConfirmation" => [
+                    "required",
+                    "same:createPassword",
+                ],
+            ],
+            [
+                "createRole.in" =>
+                    "You can only create faculty or admin users here.",
+                "createPasswordConfirmation.same" =>
+                    "Password confirmation does not match.",
+            ],
+        );
+
+        $user = User::query()->create([
+            "name" => trim($validated["createName"]),
+            "email" => mb_strtolower(trim($validated["createEmail"])),
+            "role" => $validated["createRole"],
+            "password" => $validated["createPassword"],
+        ]);
+
+        $user->forceFill(["email_verified_at" => now()])->save();
+
+        session()->flash("status", "User created successfully.");
+        $this->dispatch("notify", message: "User created.");
+
+        $this->closeCreateUserModal();
+        $this->resetPage();
+    }
+
+    protected function resetCreateUserForm(): void
+    {
+        $this->reset([
+            "createName",
+            "createEmail",
+            "createRole",
+            "createPassword",
+            "createPasswordConfirmation",
+        ]);
+
+        $this->createRole = "faculty";
     }
 
     public function updateRole(): void
     {
-        if (!$this->editingUserId) return;
+        if (!$this->editingUserId) {
+            return;
+        }
 
         $user = User::findOrFail($this->editingUserId);
-        
+
         // Prevent demoting yourself
-        if ($user->id === auth()->id() && $this->editingRole !== 'admin') {
-            session()->flash('error', 'You cannot change your own role.');
+        if ($user->id === auth()->id() && $this->editingRole !== "admin") {
+            session()->flash("error", "You cannot change your own role.");
             $this->cancelEditing();
             return;
         }
 
-        $user->update(['role' => $this->editingRole]);
+        $user->update(["role" => $this->editingRole]);
 
-        session()->flash('status', "User role updated to {$this->editingRole}.");
-        $this->dispatch('notify', message: 'User role updated.');
+        session()->flash(
+            "status",
+            "User role updated to {$this->editingRole}.",
+        );
+        $this->dispatch("notify", message: "User role updated.");
         $this->cancelEditing();
     }
 
@@ -58,28 +141,32 @@ new class extends Component {
     {
         $query = User::query()->latest();
 
-        if ($this->roleFilter !== 'all') {
-            $query->where('role', $this->roleFilter);
+        if ($this->roleFilter !== "all") {
+            $query->where("role", $this->roleFilter);
         }
 
-        if ($this->search !== '') {
+        if ($this->search !== "") {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                  ->orWhere('email', 'like', '%' . $this->search . '%');
+                $q->where("name", "like", "%" . $this->search . "%")->orWhere(
+                    "email",
+                    "like",
+                    "%" . $this->search . "%",
+                );
             });
         }
 
         return [
-            'users' => $query->paginate(12),
-            'counts' => [
-                'all' => User::count(),
-                'student' => User::where('role', 'student')->count(),
-                'faculty' => User::where('role', 'faculty')->count(),
-                'admin' => User::where('role', 'admin')->count(),
+            "users" => $query->paginate(12),
+            "counts" => [
+                "all" => User::count(),
+                "student" => User::where("role", "student")->count(),
+                "faculty" => User::where("role", "faculty")->count(),
+                "admin" => User::where("role", "admin")->count(),
             ],
         ];
     }
-}; ?>
+};
+?>
 
 <div class="space-y-6">
     {{-- Header --}}
@@ -89,8 +176,50 @@ new class extends Component {
             <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100">User Management</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">View and manage user roles.</p>
         </div>
-        <flux:button icon="plus" disabled>Add User</flux:button>
+        <flux:button icon="plus" wire:click="openCreateUserModal">Add User</flux:button>
     </div>
+
+    {{-- Create User Modal --}}
+    <flux:modal wire:model="showCreateUserModal" class="max-w-lg">
+        <div class="space-y-5">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Add User</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Create a faculty or admin account. Students register through the normal registration flow.
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <flux:input wire:model.defer="createName" label="Name" placeholder="e.g. Dr. Nur" />
+                @error('createName') <p class="text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
+
+                <flux:input wire:model.defer="createEmail" label="Email" placeholder="e.g. nur@example.com" />
+                @error('createEmail') <p class="text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+                    <select wire:model.defer="createRole" class="w-full rounded-xl border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-slate-800 dark:text-gray-100">
+                        <option value="faculty">Faculty</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    @error('createRole') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
+                </div>
+
+                <flux:input wire:model.defer="createPassword" type="password" label="Password" />
+                @error('createPassword') <p class="text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
+
+                <flux:input wire:model.defer="createPasswordConfirmation" type="password" label="Confirm Password" />
+                @error('createPasswordConfirmation') <p class="text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <flux:button wire:click="closeCreateUserModal" variant="ghost">Cancel</flux:button>
+                <flux:button wire:click="createUser" variant="primary" wire:loading.attr="disabled" wire:target="createUser">
+                    Create user
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 
     {{-- Stats Overview --}}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
