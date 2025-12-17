@@ -1,6 +1,18 @@
 # Template files (HTML prototypes - not part of Laravel app)
 template-intern-files/
 
+# Local tooling / generated docs (keep out of `main`)
+.qoder/
+.factory/
+.zencoder/
+
+# Internal planning docs (keep local only)
+NEXT_IMPLEMENTATION.md
+NEXT_IMPLEMENTATION_PRIORITIES.md
+NEXT_STEPS.md
+current_implementation_status.md
+internship_management_system_implementation_plan.md
+
 
 /.phpunit.cache
 /node_modules
