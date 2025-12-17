@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\Application;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -13,8 +13,8 @@ class EligibilityStatusNotification extends Notification implements ShouldQueue
     use Queueable;
 
     public function __construct(
-        public Application $application,
-        public string $status
+        public User $student,
+        public string $status,
     ) {}
 
     public function via(object $notifiable): array
@@ -40,7 +40,7 @@ class EligibilityStatusNotification extends Notification implements ShouldQueue
     {
         return [
             'message' => $this->getMessage(),
-            'application_id' => $this->application->id,
+            'student_id' => $this->student->id,
             'status' => $this->status,
         ];
     }

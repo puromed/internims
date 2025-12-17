@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\EligibilityDoc;
+use App\Models\User;
+use App\Notifications\EligibilityDocSubmittedNotification;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
@@ -26,10 +28,18 @@ new class extends Component {
         $file = $this->uploads[$type];
         $path = $file->store("eligibility/{$type}", 'public');
 
-        EligibilityDoc::updateOrCreate(
+        $doc = EligibilityDoc::updateOrCreate(
             ['user_id' => Auth::id(), 'type' => $type],
             ['path' => $path, 'status' => 'pending']
         );
+
+        $admins = User::query()
+            ->where('role', 'admin')
+            ->get();
+
+        foreach ($admins as $admin) {
+            $admin->notify(new EligibilityDocSubmittedNotification(Auth::user(), $doc));
+        }
 
         $this->reset("uploads.$type");
         $this->loadDocs();
