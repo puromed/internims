@@ -7,12 +7,48 @@
         <flux:sidebar sticky stashable class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
-            <a href="{{ auth()->user()->isFaculty() ? route('faculty.dashboard') : route('dashboard') }}" class="me-5 flex items-center space-x-2 rtl:space-x-reverse" wire:navigate>
+            <a href="{{ auth()->user()->isAdmin() ? route('admin.dashboard') : (auth()->user()->isFaculty() ? route('faculty.dashboard') : route('dashboard')) }}" class="me-5 flex items-center space-x-2 rtl:space-x-reverse" wire:navigate>
                 <x-app-logo />
             </a>
 
            <flux:navlist variant="outline">
-            @if(auth()->user()->isFaculty() || auth()->user()->isAdmin())
+            @if(auth()->user()->isAdmin())
+                {{-- Admin Navigation --}}
+                <flux:navlist.group :heading="__('Admin')" class="grid">
+                    <flux:navlist.item :href="route('admin.dashboard')" :current="request()->routeIs('admin.dashboard')" wire:navigate>
+                        <x-slot:icon><i data-lucide="layout-dashboard" class="size-5"></i></x-slot:icon>
+                        {{ __('Dashboard') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item :href="route('admin.eligibility.index')" :current="request()->routeIs('admin.eligibility.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="file-check" class="size-5"></i></x-slot:icon>
+                        {{ __('Eligibility Review') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item :href="route('admin.companies.index')" :current="request()->routeIs('admin.companies.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="building-2" class="size-5"></i></x-slot:icon>
+                        {{ __('Company Proposals') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item :href="route('admin.users.index')" :current="request()->routeIs('admin.users.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="users" class="size-5"></i></x-slot:icon>
+                        {{ __('User Management') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item :href="route('admin.assignments.index')" :current="request()->routeIs('admin.assignments.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="user-plus" class="size-5"></i></x-slot:icon>
+                        {{ __('Faculty Assignments') }}
+                    </flux:navlist.item>
+                </flux:navlist.group>
+
+                {{-- Admin can also access Faculty features --}}
+                <flux:navlist.group :heading="__('Faculty Tools')" class="grid">
+                    <flux:navlist.item :href="route('faculty.dashboard')" :current="request()->routeIs('faculty.dashboard')" wire:navigate>
+                        <x-slot:icon><i data-lucide="briefcase" class="size-5"></i></x-slot:icon>
+                        {{ __('Faculty Dashboard') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item :href="route('faculty.logbooks.index')" :current="request()->routeIs('faculty.logbooks.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="book-open" class="size-5"></i></x-slot:icon>
+                        {{ __('Student Logbooks') }}
+                    </flux:navlist.item>
+                </flux:navlist.group>
+            @elseif(auth()->user()->isFaculty())
                 {{-- Faculty Navigation --}}
                 <flux:navlist.group :heading="__('Faculty')" class="grid">
                     <flux:navlist.item :href="route('faculty.dashboard')" :current="request()->routeIs('faculty.dashboard')" wire:navigate>
@@ -26,6 +62,16 @@
                 </flux:navlist.group>
             @else
                 {{-- Student Navigation --}}
+                @php
+                    $user = auth()->user();
+                    $requiredDocTypes = ['resume', 'transcript', 'offer_letter'];
+                    $eligibilityDocs = $user->eligibilityDocs()->get()->keyBy('type');
+                    $allDocsApproved = collect($requiredDocTypes)->every(fn($type) => ($eligibilityDocs[$type]->status ?? '') === 'approved');
+                    $hasInternship = $user->internships()->exists();
+                    
+                    $placementLocked = !$allDocsApproved;
+                    $logbookLocked = !$hasInternship;
+                @endphp
                 <flux:navlist.group :heading="__('Internship')" class="grid">
                     <flux:navlist.item :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         <x-slot:icon><i data-lucide="layout-dashboard" class="size-5"></i></x-slot:icon>
@@ -35,14 +81,40 @@
                         <x-slot:icon><i data-lucide="file-check" class="size-5"></i></x-slot:icon>
                         {{ __('Eligibility Docs') }}
                     </flux:navlist.item>
-                    <flux:navlist.item :href="route('placement.index')" :current="request()->routeIs('placement.index')" wire:navigate>
-                        <x-slot:icon><i data-lucide="briefcase" class="size-5"></i></x-slot:icon>
-                        {{ __('My Placement') }}
-                    </flux:navlist.item>
-                    <flux:navlist.item :href="route('logbooks.index')" :current="request()->routeIs('logbooks.index')" wire:navigate>
-                        <x-slot:icon><i data-lucide="book-open" class="size-5"></i></x-slot:icon>
-                        {{ __('Weekly Logbooks') }}
-                    </flux:navlist.item>
+                    
+                    @if($placementLocked)
+                        <div class="flex items-center justify-between px-3 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="briefcase" class="size-5"></i>
+                                <span>{{ __('My Placement') }}</span>
+                            </div>
+                            <span class="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                <i data-lucide="lock" class="size-3"></i>
+                            </span>
+                        </div>
+                    @else
+                        <flux:navlist.item :href="route('placement.index')" :current="request()->routeIs('placement.index')" wire:navigate>
+                            <x-slot:icon><i data-lucide="briefcase" class="size-5"></i></x-slot:icon>
+                            {{ __('My Placement') }}
+                        </flux:navlist.item>
+                    @endif
+                    
+                    @if($logbookLocked)
+                        <div class="flex items-center justify-between px-3 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="book-open" class="size-5"></i>
+                                <span>{{ __('Weekly Logbooks') }}</span>
+                            </div>
+                            <span class="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                <i data-lucide="lock" class="size-3"></i>
+                            </span>
+                        </div>
+                    @else
+                        <flux:navlist.item :href="route('logbooks.index')" :current="request()->routeIs('logbooks.index')" wire:navigate>
+                            <x-slot:icon><i data-lucide="book-open" class="size-5"></i></x-slot:icon>
+                            {{ __('Weekly Logbooks') }}
+                        </flux:navlist.item>
+                    @endif
             </flux:navlist.group>
         @endif
     </flux:navlist>

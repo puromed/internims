@@ -47,7 +47,7 @@ new class extends Component
         $data = $this->validate([
             'week_number' => 'required|integer|min:1|max:24',
             'entry_text' => 'required|string|min:10',
-            'entry_file' => 'nullable|file|mimes:pdf|max:5120',
+            'entry_file' => 'required|file|mimes:pdf|max:5120',
         ]);
 
         $path = $this->entry_file ? $this->entry_file->store("logbooks/week-{$this->week_number}", 'public') : null;
@@ -80,57 +80,7 @@ new class extends Component
         $this->dispatch('notify', message: 'Logbook submitted.');
     }
 
-    public function analyze(): void
-    {
-        $this->validate([
-            'week_number' => 'required|integer|min:1|max:24',
-            'entry_text' => 'required|string|min:10',
-        ]);
-
-        // Get existing entry to preserve file_path if no new file is uploaded
-        $existingEntry = LogbookEntry::where('user_id', Auth::id())
-            ->where('week_number', $this->week_number)
-            ->first();
-
-        // Store file if present, otherwise preserve existing file_path
-        $path = $this->entry_file
-            ? $this->entry_file->store("logbooks/week-{$this->week_number}", 'public')
-            : ($existingEntry?->file_path ?? null);
-
-        // Store Placeholder for AI analysis job
-        $aiAnalysis = [
-            'sentiment' => 'positive',
-            'skills_identified' => ['problem solving', 'teamwork', 'communication', 'technical skills'],
-            'summary' => 'This week, the intern demonstrated strong problem solving and teamwork skills while contributing to technical projects with effective communication.',
-            'analyzed_at' => now()->toISOString(),
-        ];
-
-        LogbookEntry::updateOrCreate(
-            ['user_id' => Auth::id(), 'week_number' => $this->week_number],
-            [
-                'entry_text' => $this->entry_text,
-                'file_path' => $path,
-                'ai_analysis_json' => $aiAnalysis,
-                'status' => 'pending_review',
-            ]
-        );
-
-        // Notify faculty supervisor
-        $supervisor = Auth::user()->internships()->latest()->first()?->facultySupervisor;
-        if ($supervisor) {
-            $entry = LogbookEntry::where('user_id', Auth::id())
-                ->where('week_number', $this->week_number)
-                ->first();
-            $supervisor->notify(new \App\Notifications\NewLogbookSubmittedNotification($entry));
-        }
-
-        $this->reset(['entry_text', 'entry_file']);
-        $this->loadLogbooks();
-        $this->week_number = ($this->logbooks[0]['week_number'] ?? 0) + 1;
-        $this->refreshCurrentWeekEntry();
-        session()->flash('status', 'AI analysis  completed! Your logbook is now pending review');
-        $this->dispatch('notify', message: 'AI analysis queued (stub).');
-    }
+  
 
     public function markStatus(int $id, string $status): void
     {
@@ -216,11 +166,6 @@ new class extends Component
                 @endif
 
                 <div class="flex gap-3">
-                    <button wire:click="analyze" type="button"
-                        @if($isLocked || !$placementApproved) disabled @endif
-                        class="inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200 dark:hover:bg-indigo-500/20">
-                        <i data-lucide="sparkles" class="h-4 w-4 mr-2"></i> Analyze
-                    </button>
                     <button wire:click="submit"
                         @if($isLocked || !$placementApproved) disabled @endif
                         class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-500 dark:hover:bg-indigo-400">
@@ -235,7 +180,6 @@ new class extends Component
             <ul class="mt-3 space-y-2 text-sm text-gray-700 dark:text-gray-200">
                 <li class="flex items-start gap-2"><i data-lucide="check" class="h-4 w-4 mt-0.5 text-indigo-600 dark:text-indigo-300"></i> Keep entries focused on weekly outcomes.</li>
                 <li class="flex items-start gap-2"><i data-lucide="check" class="h-4 w-4 mt-0.5 text-indigo-600 dark:text-indigo-300"></i> Attach signed logsheet as PDF.</li>
-                <li class="flex items-start gap-2"><i data-lucide="check" class="h-4 w-4 mt-0.5 text-indigo-600 dark:text-indigo-300"></i> AI analysis will summarize skills and sentiment.</li>
             </ul>
         </div>
     </div>

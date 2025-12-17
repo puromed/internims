@@ -83,7 +83,7 @@ new class extends Component {
                 'label' => 'Documents',
                 'value' => $this->uploadedDocs,
                 'suffix' => "/ {$this->requiredDocs} uploaded",
-                'badge' => ['text' => $this->missingDocs ? 'Incomplete' : 'Complete', 'color' => $this->missingDocs ? 'red' : 'green', 'icon' => $this->missingDocs ? 'alert-circle' : 'check'],
+                'badge' => ['text' => $this->missingDocs ? 'Incomplete' : 'Complete', 'color' => $this->missingDocs ? 'red' : 'green', 'icon' => $this->missingDocs ? 'exclamation-circle' : 'check'],
             ],
             [
                 'label' => 'Logbooks',
@@ -126,7 +126,7 @@ new class extends Component {
         if (empty($this->activities)) {
             $this->activities = [
                 ['icon' => 'check', 'iconBg' => 'green', 'text' => 'Uploaded', 'highlight' => 'Advisor Form', 'time' => '1h ago'],
-                ['icon' => 'mail', 'iconBg' => 'blue', 'text' => 'Received', 'highlight' => 'system notification', 'time' => '3h ago'],
+                ['icon' => 'envelope', 'iconBg' => 'blue', 'text' => 'Received', 'highlight' => 'system notification', 'time' => '3h ago'],
                 ['icon' => 'user-plus', 'iconBg' => 'indigo', 'text' => 'Registered for', 'highlight' => 'Spring 2025', 'time' => '1d ago'],
                 ['icon' => 'play', 'iconBg' => 'gray', 'text' => 'Started', 'highlight' => 'internship journey', 'time' => '1d ago'],
             ];
@@ -137,7 +137,7 @@ new class extends Component {
             [
                 'title' => 'Upload Eligibility Documents',
                 'description' => 'Submit your Resume and Academic Transcript to complete Stage 1 verification.',
-                'icon' => 'file-text',
+                'icon' => 'document-text',
                 'accent' => 'rose',
                 'status' => $this->missingDocs ? "{$this->missingDocs} documents missing" : 'Complete',
                 'status_color' => $this->missingDocs ? 'yellow' : 'green',
@@ -176,29 +176,27 @@ new class extends Component {
 
 <div>
     {{-- Page Header --}}
-    <div class="md:flex md:items-center md:justify-between mb-8">
-        <div class="min-w-0 flex-1">
-            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">Dashboard Overview</h2>
-            <p class="mt-1 text-sm text-gray-500">Welcome back, {{ auth()->user()->name ?? 'Student' }}! Here's your internship progress.</p>
-        </div>
+    <div class="mb-8">
+        <flux:heading size="xl">Dashboard Overview</flux:heading>
+        <flux:subheading>Welcome back, {{ auth()->user()->name ?? 'Student' }}! Here's your internship progress.</flux:subheading>
     </div>
 
     {{-- Progress Stepper --}}
     <nav aria-label="Progress" class="mb-8">
-        <ol role="list" class="divide-y divide-gray-300 rounded-xl border border-gray-300 bg-white md:flex md:divide-y-0 shadow-sm">
+        <ol role="list" class="divide-y divide-gray-300 rounded-xl border border-gray-300 bg-white md:flex md:divide-y-0 shadow-sm dark:border-gray-700 dark:bg-zinc-900 dark:divide-gray-700">
             @foreach($stepper as $step)
                 <li class="relative md:flex md:flex-1">
                     <a href="#" class="group flex w-full items-center {{ !$step['active'] ? 'opacity-60 cursor-not-allowed' : '' }}">
                         <span class="flex items-center px-6 py-4 text-sm font-medium">
-                            <span class="flex size-10 shrink-0 items-center justify-center rounded-full border-2 {{ $step['active'] ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300 bg-white' }}">
-                                <span class="{{ $step['active'] ? 'text-white' : 'text-gray-500' }} font-bold">{{ $step['num'] }}</span>
+                            <span class="flex size-10 shrink-0 items-center justify-center rounded-full border-2 {{ $step['active'] ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-zinc-800' }}">
+                                <span class="{{ $step['active'] ? 'text-white' : 'text-gray-500 dark:text-gray-400' }} font-bold">{{ $step['num'] }}</span>
                             </span>
-                            <span class="ml-4 text-sm font-medium {{ $step['active'] ? 'text-indigo-600' : 'text-gray-500' }}">{{ $step['label'] }}</span>
+                            <span class="ml-4 text-sm font-medium {{ $step['active'] ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400' }}">{{ $step['label'] }}</span>
                         </span>
                     </a>
                     @if($step['num'] < 4)
                         <div class="absolute top-0 right-0 hidden h-full w-5 md:block" aria-hidden="true">
-                            <svg class="size-full text-gray-300" viewBox="0 0 22 80" fill="none" preserveAspectRatio="none">
+                            <svg class="size-full text-gray-300 dark:text-gray-700" viewBox="0 0 22 80" fill="none" preserveAspectRatio="none">
                                 <path d="M0 -2L20 40L0 82" vector-effect="non-scaling-stroke" stroke="currentcolor" stroke-linejoin="round" />
                             </svg>
                         </div>
@@ -209,50 +207,50 @@ new class extends Component {
     </nav>
 
     {{-- Stats Grid --}}
-    <dl class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         @foreach($stats as $stat)
-            <div class="overflow-hidden rounded-2xl bg-white px-4 py-5 shadow-sm ring-1 ring-gray-900/5 sm:p-6">
-                <dt class="truncate text-sm font-medium text-gray-500">{{ $stat['label'] }}</dt>
-                <dd class="mt-1 flex items-baseline justify-between md:block lg:flex">
-                    <div class="flex items-baseline text-2xl font-semibold {{ $loop->first ? 'text-indigo-600' : 'text-gray-900' }}">
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
+                <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ $stat['label'] }}</dt>
+                <dd class="mt-2 flex items-baseline justify-between md:block lg:flex">
+                    <div class="flex items-baseline text-2xl font-bold {{ $loop->first ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-white' }}">
                         {{ $stat['value'] }}
-                        <span class="ml-2 text-sm font-medium text-gray-500">{{ $stat['suffix'] }}</span>
+                        <span class="ml-2 text-sm font-medium text-gray-500 dark:text-gray-400">{{ $stat['suffix'] }}</span>
                     </div>
-                    <div class="inline-flex items-baseline rounded-full px-2.5 py-0.5 text-sm font-medium md:mt-2 lg:mt-0
-                        @if($stat['badge']['color'] === 'yellow') bg-yellow-100 text-yellow-800
-                        @elseif($stat['badge']['color'] === 'gray') bg-gray-100 text-gray-800
-                        @elseif($stat['badge']['color'] === 'red') bg-red-100 text-red-800
-                        @elseif($stat['badge']['color'] === 'blue') bg-blue-100 text-blue-800
-                        @elseif($stat['badge']['color'] === 'green') bg-green-100 text-green-800
-                        @endif">
+                    
+                    @php
+                        $badgeColor = match($stat['badge']['color']) {
+                            'yellow' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200',
+                            'red'    => 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200',
+                            'blue'   => 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
+                            'green'  => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200',
+                            default  => 'bg-gray-100 text-gray-800 dark:bg-zinc-800 dark:text-zinc-300',
+                        };
+                    @endphp
+
+                    <div class="inline-flex items-baseline rounded-full px-2.5 py-0.5 text-sm font-medium md:mt-2 lg:mt-0 {{ $badgeColor }}">
                         @if($stat['badge']['icon'])
-                            <i data-lucide="{{ $stat['badge']['icon'] }}" class="mr-1 h-3 w-3 self-center
-                                @if($stat['badge']['color'] === 'yellow') text-yellow-500
-                                @elseif($stat['badge']['color'] === 'red') text-red-500
-                                @elseif($stat['badge']['color'] === 'blue') text-blue-500
-                                @elseif($stat['badge']['color'] === 'green') text-green-500
-                                @endif"></i>
+                            <flux:icon name="{{ $stat['badge']['icon'] }}" class="mr-1 size-3 self-center" />
                         @endif
                         {{ $stat['badge']['text'] }}
                     </div>
                 </dd>
             </div>
         @endforeach
-    </dl>
+    </div>
 
     <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {{-- Left Column: Required Actions --}}
         <div class="lg:col-span-2">
-            <h3 class="text-base font-semibold leading-6 text-gray-900 mb-4">Required Actions</h3>
-            <div class="divide-y divide-gray-200 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-900/5">
+            <flux:heading size="lg" class="mb-4">Required Actions</flux:heading>
+            <div class="divide-y divide-gray-200 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-zinc-900 dark:divide-gray-700">
                 @include('livewire.partials.dashboard-actions', ['actions' => $actions])
             </div>
         </div>
 
         {{-- Right Column: Activity Feed --}}
         <div class="lg:col-span-1">
-            <h3 class="text-base font-semibold leading-6 text-gray-900 mb-4">Recent Activity</h3>
-            <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-900/5 p-6">
+            <flux:heading size="lg" class="mb-4">Recent Activity</flux:heading>
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm p-6 dark:border-gray-700 dark:bg-zinc-900">
                 @include('livewire.partials.dashboard-activity', ['activities' => $activities])
             </div>
             @include('livewire.partials.dashboard-dates', ['dates' => $dates])

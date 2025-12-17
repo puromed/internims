@@ -20,9 +20,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Student routes
     Volt::route('dashboard', 'dashboard')->name('dashboard');
     Volt::route('eligibility', 'eligibility.index')->name('eligibility.index');
-    Volt::route('placement', 'placement.index')->name('placement.index');
-    Volt::route('logbooks', 'logbooks.index')->name('logbooks.index');
-    Volt::route('logbooks/{logbook}', 'logbooks.show')->name('logbooks.show');
+    
+    // Placement requires all eligibility docs to be approved
+    Volt::route('placement', 'placement.index')
+        ->middleware(\App\Http\Middleware\EnsureEligibilityCompleted::class)
+        ->name('placement.index');
+    
+    // Logbooks require internship to exist
+    Volt::route('logbooks', 'logbooks.index')
+        ->middleware(\App\Http\Middleware\EnsureInternshipExists::class)
+        ->name('logbooks.index');
+    Volt::route('logbooks/{logbook}', 'logbooks.show')
+        ->middleware(\App\Http\Middleware\EnsureInternshipExists::class)
+        ->name('logbooks.show');
+
+    // Admin routes
+    Route::middleware('role:admin')
+        ->prefix('admin')
+        ->as('admin.')
+        ->group(function () {
+            Volt::route('dashboard', 'admin.dashboard')->name('dashboard');
+            Volt::route('eligibility', 'admin.eligibility.index')->name('eligibility.index');
+            Volt::route('companies', 'admin.companies.index')->name('companies.index');
+            Volt::route('users', 'admin.users.index')->name('users.index');
+            Volt::route('assignments', 'admin.assignments.index')->name('assignments.index');
+        });
 
     // Faculty routes
     Route::middleware('role:faculty,admin')
@@ -30,6 +52,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->as('faculty.')
         ->group(function () {
             Volt::route('dashboard', 'faculty.dashboard')->name('dashboard');
+            Volt::route('students', 'faculty.students.index')->name('students.index');
             Volt::route('logbooks', 'faculty.logbooks.index')->name('logbooks.index');
             Volt::route('logbooks/{logbook}', 'faculty.logbooks.show')->name('logbooks.show');
         });
