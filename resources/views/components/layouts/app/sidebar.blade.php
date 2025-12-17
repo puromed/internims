@@ -306,8 +306,11 @@
                 }, 500);
             })();
 
-            document.addEventListener('DOMContentLoaded', () => window.lucide?.createIcons());
-            document.addEventListener('livewire:navigated', () => window.lucide?.createIcons());
+           const renderLucide = () => window.lucide?.createIcons({ icons: window.lucide?.icons });
+
+           document.addEventListener('DOMContentLoaded', renderLucide);
+           document.addEventListener('livewire:navigated', renderLucide);
+
         </script>
     </body>
 </html>
