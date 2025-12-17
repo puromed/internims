@@ -5,13 +5,12 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
 
-new class extends Component
-{
+new class extends Component {
     use WithFileUploads;
 
     public array $logbooks = [];
 
-    public string $entry_text = '';
+    public string $entry_text = "";
 
     public $entry_file = null;
 
@@ -25,84 +24,97 @@ new class extends Component
 
     protected function refreshCurrentWeekEntry(): void
     {
-        $this->currentWeekEntry = LogbookEntry::where('user_id', Auth::id())
-            ->where('week_number', $this->week_number)
-            ->first()
-            ?->toArray() ?? null;
+        $this->currentWeekEntry =
+            LogbookEntry::where("user_id", Auth::id())
+                ->where("week_number", $this->week_number)
+                ->first()
+                ?->toArray() ?? null;
     }
 
     public function mount(): void
     {
         $user = Auth::user();
         $application = $user->applications()->latest()->first();
-        $this->placementApproved = $application && $application->status === 'approved';
+        $this->placementApproved =
+            $application && $application->status === "approved";
 
         $this->loadLogbooks();
-        $this->week_number = ($this->logbooks[0]['week_number'] ?? 0) + 1;
+        $this->week_number = ($this->logbooks[0]["week_number"] ?? 0) + 1;
         $this->refreshCurrentWeekEntry();
     }
 
     public function submit(): void
     {
         $data = $this->validate([
-            'week_number' => 'required|integer|min:1|max:24',
-            'entry_text' => 'required|string|min:10',
-            'entry_file' => 'required|file|mimes:pdf|max:5120',
+            "week_number" => "required|integer|min:1|max:24",
+            "entry_text" => "required|string|min:10",
+            "entry_file" => "required|file|mimes:pdf|max:5120",
         ]);
 
-        $path = $this->entry_file ? $this->entry_file->store("logbooks/week-{$this->week_number}", 'public') : null;
+        $path = $this->entry_file
+            ? $this->entry_file->store(
+                "logbooks/week-{$this->week_number}",
+                "public",
+            )
+            : null;
 
         LogbookEntry::updateOrCreate(
-            ['user_id' => Auth::id(), 'week_number' => $this->week_number],
+            ["user_id" => Auth::id(), "week_number" => $this->week_number],
             [
-                'entry_text' => $this->entry_text,
-                'file_path' => $path,
-                'status' => 'submitted',
-                'submitted_at' => now(),
-            ]
+                "entry_text" => $this->entry_text,
+                "file_path" => $path,
+                "status" => "pending_review",
+                "supervisor_status" => "pending",
+                "submitted_at" => now(),
+            ],
         );
 
         // Notify faculty supervisor
-        $supervisor = Auth::user()->internships()->latest()->first()?->facultySupervisor;
+        $supervisor = Auth::user()->internships()->latest()->first()
+            ?->facultySupervisor;
         if ($supervisor) {
-            $entry = LogbookEntry::where('user_id', Auth::id())
-                ->where('week_number', $this->week_number)
+            $entry = LogbookEntry::where("user_id", Auth::id())
+                ->where("week_number", $this->week_number)
                 ->first();
-            $supervisor->notify(new \App\Notifications\NewLogbookSubmittedNotification($entry));
+            $supervisor->notify(
+                new \App\Notifications\NewLogbookSubmittedNotification($entry),
+            );
         }
 
-        $this->reset(['entry_text', 'entry_file']);
+        $this->reset(["entry_text", "entry_file"]);
         $this->loadLogbooks();
-        $this->week_number = ($this->logbooks[0]['week_number'] ?? 0) + 1;
+        $this->week_number = ($this->logbooks[0]["week_number"] ?? 0) + 1;
         $this->refreshCurrentWeekEntry();
 
-        session()->flash('status', "Week {$data['week_number']} logbook submitted successfully.");
-        $this->dispatch('notify', message: 'Logbook submitted.');
+        session()->flash(
+            "status",
+            "Week {$data["week_number"]} logbook submitted successfully.",
+        );
+        $this->dispatch("notify", message: "Logbook submitted.");
     }
-
-  
 
     public function markStatus(int $id, string $status): void
     {
-        $entry = LogbookEntry::where('user_id', Auth::id())->findOrFail($id);
+        $entry = LogbookEntry::where("user_id", Auth::id())->findOrFail($id);
         $entry->status = $status;
         $entry->save();
 
         $this->loadLogbooks();
-        session()->flash('status', "Logbook entry marked as {$status}.");
-        $this->dispatch('notify', message: "Status updated to {$status}.");
+        session()->flash("status", "Logbook entry marked as {$status}.");
+        $this->dispatch("notify", message: "Status updated to {$status}.");
     }
 
     protected function loadLogbooks(): void
     {
         $this->logbooks = Auth::user()
             ->logbookEntries()
-            ->latest('week_number')
+            ->latest("week_number")
             ->limit(8)
             ->get()
             ->toArray();
     }
-}; ?>
+};
+?>
 
 <div class="space-y-8 text-gray-900 dark:text-gray-100">
     {{-- Header --}}
@@ -115,7 +127,7 @@ new class extends Component
             {{ count($logbooks) }} submitted
         </div>
     </div>
-    
+
     {{-- Placement approval gate --}}
     @if(!$placementApproved)
         <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-100">

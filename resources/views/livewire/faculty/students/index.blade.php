@@ -6,42 +6,54 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
 new class extends Component {
-    public string $search = '';
+    public string $search = "";
 
     public function with(): array
     {
         $facultyId = Auth::id();
 
         $query = Internship::query()
-            ->where('faculty_supervisor_id', $facultyId)
-            ->where('status', 'active')
-            ->with(['user', 'user.logbookEntries']);
+            ->where("faculty_supervisor_id", $facultyId)
+            ->whereIn("status", ["pending", "active"])
+            ->with(["user", "user.logbookEntries"]);
 
-        if ($this->search !== '') {
-            $query->whereHas('user', fn($q) => $q->where('name', 'like', '%' . $this->search . '%'));
+        if ($this->search !== "") {
+            $query->whereHas(
+                "user",
+                fn($q) => $q->where("name", "like", "%" . $this->search . "%"),
+            );
         }
 
         $internships = $query->get()->map(function ($internship) {
             $entries = $internship->user->logbookEntries ?? collect();
-            
+
             return [
-                'id' => $internship->id,
-                'user' => $internship->user,
-                'company' => $internship->company_name,
-                'position' => $internship->position,
-                'total_weeks' => $entries->count(),
-                'approved' => $entries->where('supervisor_status', 'verified')->count(),
-                'pending' => $entries->where('supervisor_status', 'pending')->count(),
-                'revision' => $entries->where('supervisor_status', 'revision_requested')->count(),
-                'latest_submission' => $entries->sortByDesc('submitted_at')->first()?->submitted_at,
+                "id" => $internship->id,
+                "user" => $internship->user,
+                "company" => $internship->company_name,
+                "position" => $internship->position,
+                "total_weeks" => $entries->count(),
+                "approved" => $entries
+                    ->where("supervisor_status", "verified")
+                    ->count(),
+                "pending" => $entries
+                    ->where("supervisor_status", "pending")
+                    ->count(),
+                "revision" => $entries
+                    ->where("supervisor_status", "revision_requested")
+                    ->count(),
+                "latest_submission" => $entries
+                    ->sortByDesc("submitted_at")
+                    ->first()?->submitted_at,
             ];
         });
 
         return [
-            'students' => $internships,
+            "students" => $internships,
         ];
     }
-}; ?>
+};
+?>
 
 <div class="space-y-6">
     {{-- Header --}}

@@ -4,15 +4,11 @@ namespace App\Notifications;
 
 use App\Models\EligibilityDoc;
 use App\Models\User;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class EligibilityDocSubmittedNotification extends Notification implements ShouldQueue
+class EligibilityDocSubmittedNotification extends Notification
 {
-    use Queueable;
-
     public function __construct(
         public User $student,
         public EligibilityDoc $doc,
@@ -38,11 +34,16 @@ class EligibilityDocSubmittedNotification extends Notification implements Should
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
+        return new MailMessage()
             ->subject('New eligibility document submitted')
             ->greeting("Hello {$notifiable->name},")
-            ->line("{$this->student->name} submitted {$this->docLabel()} for eligibility review.")
-            ->action('Open Eligibility Review', route('admin.eligibility.index'));
+            ->line(
+                "{$this->student->name} submitted {$this->docLabel()} for eligibility review.",
+            )
+            ->action(
+                'Open Eligibility Review',
+                route('admin.eligibility.index'),
+            );
     }
 
     protected function docLabel(): string

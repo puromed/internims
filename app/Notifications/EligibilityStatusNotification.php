@@ -3,19 +3,12 @@
 namespace App\Notifications;
 
 use App\Models\User;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class EligibilityStatusNotification extends Notification implements ShouldQueue
+class EligibilityStatusNotification extends Notification
 {
-    use Queueable;
-
-    public function __construct(
-        public User $student,
-        public string $status,
-    ) {}
+    public function __construct(public User $student, public string $status) {}
 
     public function via(object $notifiable): array
     {
@@ -24,24 +17,34 @@ class EligibilityStatusNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $subject = $this->status === 'approved'
-            ? 'Your eligibility has been approved!'
-            : 'Eligibility review update';
+        $subject =
+            $this->status === 'approved'
+                ? 'Your eligibility has been approved!'
+                : 'Eligibility review update';
 
-        return (new MailMessage)
+        return new MailMessage()
             ->subject($subject)
             ->greeting("Hello {$notifiable->name},")
             ->line($this->getMessage())
-            ->action('View Details', url('/eligibility'))
+            ->action(
+                'View Details',
+                $this->status === 'approved'
+                    ? route('placement.index')
+                    : route('eligibility.index'),
+            )
             ->line('Thank you for using our system!');
     }
 
     public function toDatabase(object $notifiable): array
     {
         return [
+            'type' => 'eligibility_status',
             'message' => $this->getMessage(),
             'student_id' => $this->student->id,
             'status' => $this->status,
+            'action_url' => $this->status === 'approved'
+                    ? route('placement.index')
+                    : route('eligibility.index'),
         ];
     }
 

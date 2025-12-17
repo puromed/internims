@@ -49,6 +49,6 @@ class LogbookEntryPolicy
         }
 
         // Only review entries that are in the faculty workflow.
-        return in_array($entry->status, ['pending_review'], true);
+        return in_array($entry->status, ['pending_review', 'submitted'], true);
     }
 }
