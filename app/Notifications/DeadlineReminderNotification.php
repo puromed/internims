@@ -11,7 +11,9 @@ class DeadlineReminderNotification extends Notification
 {
     use Queueable;
 
-    public function __construct(public ImportantDate $importantDate, public string $reminderType) {}
+    public function __construct(public ImportantDate $importantDate, public string $reminderType)
+    {
+    }
 
     public function via(object $notifiable): array
     {
@@ -20,7 +22,7 @@ class DeadlineReminderNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $daysLeft = now()->diffInDays($this->importantDate->date, false);
+        $daysLeft = (int) now()->diffInDays($this->importantDate->date, false);
         $daysText = $daysLeft === 0 ? 'today' : "in {$daysLeft} days";
 
         return (new MailMessage)
@@ -29,7 +31,8 @@ class DeadlineReminderNotification extends Notification
             ->line("This is a reminder that the deadline for **{$this->importantDate->title}** is {$daysText} ({$this->importantDate->date->format('M d, Y')}).")
             ->line($this->getInstruction())
             ->action('Take Action Now', $this->getActionUrl())
-            ->line('Please ensure you complete this task before the deadline to avoid any delays in your internship process.');
+            ->line('Please ensure you complete this task before the deadline to avoid any delays in your internship process.')
+            ->salutation('Regards, Admin');
     }
 
     public function toDatabase(object $notifiable): array

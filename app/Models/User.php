@@ -28,6 +28,11 @@ class User extends Authenticatable
         'theme_preference',
     ];
 
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
+
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -61,7 +66,7 @@ class User extends Authenticatable
         return Str::of($this->name)
             ->explode(' ')
             ->take(2)
-            ->map(fn ($word) => Str::substr($word, 0, 1))
+            ->map(fn($word) => Str::substr($word, 0, 1))
             ->implode('');
     }
 
@@ -105,7 +110,7 @@ class User extends Authenticatable
      */
     public function supervisesLogbookEntry(LogbookEntry $entry): bool
     {
-        if (! $this->isFaculty()) {
+        if (!$this->isFaculty()) {
             return false;
         }
 

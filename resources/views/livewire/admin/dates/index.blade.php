@@ -1,13 +1,14 @@
 <?php
 
 use App\Models\ImportantDate;
+use App\Services\SemesterService;
+use Carbon\Carbon;
 use function Livewire\Volt\{state, computed, rules};
 
 state([
     'title' => '',
     'date' => '',
     'type' => 'eligibility',
-    'semester' => 'Spring 2025',
     'showModal' => false,
 ]);
 
@@ -15,19 +16,20 @@ rules([
     'title' => 'required|string|max:255',
     'date' => 'required|date',
     'type' => 'required|in:eligibility,placement,internship,other',
-    'semester' => 'required|string|max:255',
 ]);
 
-$dates = computed(fn () => ImportantDate::latest('date')->get());
+$dates = computed(fn() => ImportantDate::latest('date')->get());
 
 $save = function () {
     $this->validate();
+
+    $semester = SemesterService::getSemesterCode(Carbon::parse($this->date));
 
     ImportantDate::create([
         'title' => $this->title,
         'date' => $this->date,
         'type' => $this->type,
-        'semester' => $this->semester,
+        'semester' => $semester,
     ]);
 
     $this->reset(['title', 'date', 'type', 'showModal']);
@@ -50,15 +52,24 @@ $delete = function (ImportantDate $date) {
         <flux:button variant="primary" icon="plus" wire:click="$set('showModal', true)">Add Date</flux:button>
     </div>
 
-    <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-zinc-900 overflow-hidden">
+    <div
+        class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-zinc-900 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead class="bg-gray-50 dark:bg-zinc-800/50">
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Title</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Date</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Type</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Semester</th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                            Title</th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                            Date</th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                            Type</th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                            Semester</th>
                         <th scope="col" class="relative px-6 py-3">
                             <span class="sr-only">Actions</span>
                         </th>
@@ -74,7 +85,8 @@ $delete = function (ImportantDate $date) {
                                 {{ $date->date->format('M d, Y') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                <flux:badge size="sm" :color="$date->type === 'eligibility' ? 'blue' : ($date->type === 'placement' ? 'indigo' : 'gray')">
+                                <flux:badge size="sm"
+                                    :color="$date->type === 'eligibility' ? 'blue' : ($date->type === 'placement' ? 'indigo' : 'gray')">
                                     {{ ucfirst($date->type) }}
                                 </flux:badge>
                             </td>
@@ -82,7 +94,8 @@ $delete = function (ImportantDate $date) {
                                 {{ $date->semester }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <flux:button variant="ghost" size="sm" icon="trash" wire:click="delete({{ $date->id }})" wire:confirm="Are you sure you want to delete this date?" />
+                                <flux:button variant="ghost" size="sm" icon="trash" wire:click="delete({{ $date->id }})"
+                                    wire:confirm="Are you sure you want to delete this date?" />
                             </td>
                         </tr>
                     @endforeach
@@ -129,11 +142,19 @@ $delete = function (ImportantDate $date) {
                 <flux:error name="type" />
             </flux:field>
 
-            <flux:field>
-                <flux:label>Semester</flux:label>
-                <flux:input wire:model="semester" />
-                <flux:error name="semester" />
-            </flux:field>
+            @if($date && is_string($date) && strtotime($date))
+                <div class="rounded-lg bg-gray-50 dark:bg-zinc-800 p-3">
+                    <flux:label class="mb-1">Semester (auto-detected)</flux:label>
+                    <div class="flex items-center gap-2">
+                        <flux:badge color="indigo">
+                            {{ \App\Services\SemesterService::getSemesterCode(\Carbon\Carbon::parse($date)) }}
+                        </flux:badge>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">
+                            Based on selected date
+                        </span>
+                    </div>
+                </div>
+            @endif
 
             <div class="flex justify-end gap-3">
                 <flux:button variant="ghost" wire:click="$set('showModal', false)">Cancel</flux:button>

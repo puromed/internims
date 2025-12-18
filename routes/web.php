@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\ThemePreferenceController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
@@ -8,6 +9,15 @@ use Livewire\Volt\Volt;
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
+
+// OAuth Routes
+Route::get('/auth/{provider}', [SocialAuthController::class, 'redirect'])
+    ->where('provider', 'google|microsoft')
+    ->name('social.redirect');
+
+Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+    ->where('provider', 'google|microsoft')
+    ->name('social.callback');
 
 // optional route for gallery smoke test
 Route::get('/gallery', function () {
@@ -68,7 +78,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(
             when(
                 Features::canManageTwoFactorAuthentication()
-                    && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword'),
+                && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword'),
                 ['password.confirm'],
                 [],
             ),
