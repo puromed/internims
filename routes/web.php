@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\ThemePreferenceController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
@@ -8,6 +9,15 @@ use Livewire\Volt\Volt;
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
+
+// OAuth Routes
+Route::get('/auth/{provider}', [SocialAuthController::class, 'redirect'])
+    ->where('provider', 'google|microsoft')
+    ->name('social.redirect');
+
+Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+    ->where('provider', 'google|microsoft')
+    ->name('social.callback');
 
 // optional route for gallery smoke test
 Route::get('/gallery', function () {
@@ -20,12 +30,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Student routes
     Volt::route('dashboard', 'dashboard')->name('dashboard');
     Volt::route('eligibility', 'eligibility.index')->name('eligibility.index');
-    
+
     // Placement requires all eligibility docs to be approved
     Volt::route('placement', 'placement.index')
         ->middleware(\App\Http\Middleware\EnsureEligibilityCompleted::class)
         ->name('placement.index');
-    
+
     // Logbooks require internship to exist
     Volt::route('logbooks', 'logbooks.index')
         ->middleware(\App\Http\Middleware\EnsureInternshipExists::class)
@@ -44,6 +54,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Volt::route('companies', 'admin.companies.index')->name('companies.index');
             Volt::route('users', 'admin.users.index')->name('users.index');
             Volt::route('assignments', 'admin.assignments.index')->name('assignments.index');
+            Volt::route('dates', 'admin.dates.index')->name('dates.index');
         });
 
     // Faculty routes
@@ -67,7 +78,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(
             when(
                 Features::canManageTwoFactorAuthentication()
-                    && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword'),
+                && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword'),
                 ['password.confirm'],
                 [],
             ),

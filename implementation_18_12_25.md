@@ -52,3 +52,4 @@ Focused on fixing core workflow bugs (email/notifications, logbooks review autho
 - Verify UI flows end-to-end with seeded/realistic data (multiple students, multiple weeks logbooks).
 - Consider adding status badges (“Pending/Active”) in faculty student cards for clarity.
 - Optional: Link “Needs Revision” dashboard card to filtered logbooks list.
+- Admin can add important dates based on the semester. 
