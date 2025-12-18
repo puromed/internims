@@ -104,29 +104,110 @@ new class extends Component {
         ];
 
         // Activity
-        $rawActivities = DB::table('notifications')
+        $activities = collect();
+
+        // 1. Notifications
+        $notifs = DB::table('notifications')
             ->where('notifiable_id', $user->id)
             ->latest()
-            ->limit(4)
-            ->get();
+            ->limit(10)
+            ->get()
+            ->map(function ($n) {
+                $data = json_decode($n->data, true) ?? [];
+                return [
+                    'icon' => $data['icon'] ?? 'bell',
+                    'iconBg' => $data['iconBg'] ?? 'blue',
+                    'text' => $data['text'] ?? ($data['message'] ?? 'Notification'),
+                    'highlight' => $data['highlight'] ?? ($data['title'] ?? ''),
+                    'time' => \Illuminate\Support\Carbon::parse($n->created_at),
+                ];
+            });
+        $activities = $activities->concat($notifs);
 
-        $this->activities = $rawActivities->map(function ($n) {
-            $data = json_decode($n->data, true) ?? [];
-            $text = $data['text'] ?? ($data['message'] ?? 'Notification');
-            $highlight = $data['highlight'] ?? ($data['title'] ?? '');
+        // 2. Eligibility Docs
+        $docs = $user->eligibilityDocs()->latest('updated_at')->limit(5)->get()->map(function ($doc) {
+            $statusText = match ($doc->status) {
+                'approved' => 'Approved',
+                'rejected' => 'Rejected',
+                default => 'Uploaded',
+            };
+            $icon = match ($doc->status) {
+                'approved' => 'check',
+                'rejected' => 'x-mark',
+                default => 'document-text',
+            };
+            $bg = match ($doc->status) {
+                'approved' => 'green',
+                'rejected' => 'red',
+                default => 'blue',
+            };
+
             return [
-                'icon' => $data['icon'] ?? 'bell',
-                'iconBg' => $data['iconBg'] ?? 'blue',
-                'text' => $text,
-                'highlight' => $highlight,
-                'time' => optional($n->created_at)->diffForHumans() ?? '',
+                'icon' => $icon,
+                'iconBg' => $bg,
+                'text' => $statusText,
+                'highlight' => ucfirst(str_replace('_', ' ', $doc->type)),
+                'time' => $doc->updated_at,
             ];
-        })->all();
+        });
+        $activities = $activities->concat($docs);
+
+        // 3. Logbooks
+        $logbooks = $user->logbookEntries()->latest('updated_at')->limit(5)->get()->map(function ($entry) {
+            $statusText = match ($entry->status) {
+                'approved' => 'Approved',
+                'rejected', 'needs_revision' => 'Revision Requested',
+                'submitted', 'pending_review' => 'Submitted',
+                default => 'Updated',
+            };
+            $icon = match ($entry->status) {
+                'approved' => 'check',
+                'rejected', 'needs_revision' => 'exclamation-triangle',
+                'submitted', 'pending_review' => 'paper-airplane',
+                default => 'pencil',
+            };
+            $bg = match ($entry->status) {
+                'approved' => 'green',
+                'rejected', 'needs_revision' => 'yellow',
+                'submitted', 'pending_review' => 'blue',
+                default => 'gray',
+            };
+
+            return [
+                'icon' => $icon,
+                'iconBg' => $bg,
+                'text' => $statusText,
+                'highlight' => "Week {$entry->week_number} Logbook",
+                'time' => $entry->updated_at,
+            ];
+        });
+        $activities = $activities->concat($logbooks);
+
+        // 4. Internship
+        $internships = $user->internships()->latest('updated_at')->limit(5)->get()->map(function ($internship) {
+            return [
+                'icon' => 'briefcase',
+                'iconBg' => 'indigo',
+                'text' => 'Updated placement at',
+                'highlight' => $internship->company_name ?: 'TBD',
+                'time' => $internship->updated_at,
+            ];
+        });
+        $activities = $activities->concat($internships);
+
+        // Sort and format
+        $this->activities = $activities->sortByDesc('time')
+            ->take(15)
+            ->map(function ($a) {
+                $a['time'] = $a['time']->diffForHumans();
+
+                return $a;
+            })
+            ->values()
+            ->all();
 
         if (empty($this->activities)) {
             $this->activities = [
-                ['icon' => 'check', 'iconBg' => 'green', 'text' => 'Uploaded', 'highlight' => 'Advisor Form', 'time' => '1h ago'],
-                ['icon' => 'envelope', 'iconBg' => 'blue', 'text' => 'Received', 'highlight' => 'system notification', 'time' => '3h ago'],
                 ['icon' => 'user-plus', 'iconBg' => 'indigo', 'text' => 'Registered for', 'highlight' => 'Spring 2025', 'time' => '1d ago'],
                 ['icon' => 'play', 'iconBg' => 'gray', 'text' => 'Started', 'highlight' => 'internship journey', 'time' => '1d ago'],
             ];
@@ -142,6 +223,7 @@ new class extends Component {
                 'status' => $this->missingDocs ? "{$this->missingDocs} documents missing" : 'Complete',
                 'status_color' => $this->missingDocs ? 'yellow' : 'green',
                 'locked' => false,
+                'url' => route('eligibility.index'),
             ],
             [
                 'title' => 'Register Placement Company',
@@ -151,6 +233,7 @@ new class extends Component {
                 'status' => $placementUnlocked ? 'Open' : 'Locked',
                 'status_color' => $placementUnlocked ? 'green' : 'gray',
                 'locked' => !$placementUnlocked,
+                'url' => route('placement.index'),
             ],
             [
                 'title' => 'Submit Weekly Logbooks',
@@ -162,6 +245,7 @@ new class extends Component {
                 'status' => $logbooksUnlocked ? "{$logbookTotal} / 24 submitted" : 'Locked',
                 'status_color' => $logbooksUnlocked ? ($logbookTotal > 0 ? 'green' : 'yellow') : 'gray',
                 'locked' => !$logbooksUnlocked,
+                'url' => route('logbooks.index'),
             ],
         ];
 
@@ -250,8 +334,10 @@ new class extends Component {
         {{-- Right Column: Activity Feed --}}
         <div class="lg:col-span-1">
             <flux:heading size="lg" class="mb-4">Recent Activity</flux:heading>
-            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm p-6 dark:border-gray-700 dark:bg-zinc-900">
-                @include('livewire.partials.dashboard-activity', ['activities' => $activities])
+            <div class="rounded-xl border border-gray-200 bg-white shadow-sm p-6 dark:border-gray-700 dark:bg-zinc-900">
+                <div class="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    @include('livewire.partials.dashboard-activity', ['activities' => $activities])
+                </div>
             </div>
             @include('livewire.partials.dashboard-dates', ['dates' => $dates])
         </div>

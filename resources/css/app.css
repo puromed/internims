@@ -48,6 +48,29 @@
 }
 
 [data-flux-field]:not(ui-radio, ui-checkbox) {
+    --flux-field-gap: 0.5rem;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 10px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #374151;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
+}
     @apply grid gap-2;
 }
 

@@ -12,21 +12,9 @@ $statusBg = [
 @endphp
 
 @foreach($actions as $action)
-    @php
-        $href = null;
-        if (!$action['locked']) {
-            if ($action['title'] === 'Upload Eligibility Documents') {
-                $href = route('eligibility.index');
-            } elseif ($action['title'] === 'Register Placement Company') {
-                $href = route('placement.index');
-            } elseif ($action['title'] === 'Submit Weekly Logbooks') {
-                $href = route('logbooks.index');
-            }
-        }
-    @endphp
     <div class="group relative p-6 {{ $action['locked'] ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-zinc-800/50 cursor-pointer' }}">
-        @if($href)
-            <a href="{{ $href }}" class="absolute inset-0" aria-label="{{ $action['title'] }}" wire:navigate></a>
+        @if(!$action['locked'] && isset($action['url']))
+            <a href="{{ $action['url'] }}" class="absolute inset-0 z-10" aria-label="{{ $action['title'] }}" wire:navigate></a>
         @endif
         <div>
             <span class="inline-flex rounded-lg {{ $accentBg[$action['accent']] ?? 'bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-zinc-500' }} p-3 ring-4 ring-white dark:ring-zinc-900">
@@ -35,7 +23,6 @@ $statusBg = [
         </div>
         <div class="mt-4">
             <h3 class="text-lg font-semibold {{ $action['locked'] ? 'text-gray-500 dark:text-gray-500' : 'text-gray-900 dark:text-white' }}">
-                <span class="absolute inset-0" aria-hidden="true"></span>
                 {{ $action['title'] }}
                 @if($action['locked'])
                     <span class="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-zinc-800 dark:text-zinc-400">
