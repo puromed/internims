@@ -35,6 +35,10 @@
                         <x-slot:icon><i data-lucide="user-plus" class="size-5"></i></x-slot:icon>
                         {{ __('Faculty Assignments') }}
                     </flux:navlist.item>
+                    <flux:navlist.item :href="route('admin.dates.index')" :current="request()->routeIs('admin.dates.*')" wire:navigate>
+                        <x-slot:icon><i data-lucide="calendar" class="size-5"></i></x-slot:icon>
+                        {{ __('Important Dates') }}
+                    </flux:navlist.item>
                 </flux:navlist.group>
 
                 {{-- Admin can also access Faculty features --}}

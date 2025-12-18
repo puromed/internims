@@ -250,11 +250,15 @@ new class extends Component {
         ];
 
         // Dates
-        $this->dates = [
-            'deadline' => now()->addDays(30)->format('M d, Y'),
-            'placement_start' => optional($placement?->start_date)->format('M d, Y') ?: now()->addWeeks(10)->format('M d, Y'),
-            'internship_end' => optional($placement?->end_date)->format('M d, Y') ?: now()->addMonths(6)->format('M d, Y'),
-        ];
+        $this->dates = \App\Models\ImportantDate::query()
+            ->where('semester', 'Spring 2025')
+            ->orderBy('date')
+            ->get()
+            ->map(fn ($d) => [
+                'title' => $d->title,
+                'date' => $d->date->format('M d, Y'),
+            ])
+            ->toArray();
     }
 }; ?>
 
