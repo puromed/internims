@@ -43,6 +43,8 @@ class DatabaseSeeder extends Seeder
                 'password' => 'password',
                 'email_verified_at' => now(),
                 'role' => 'student',
+                'student_id' => '2021542287',
+                'course_code' => 'CDIM262',
             ]
         );
     }

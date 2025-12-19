@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
@@ -11,6 +12,8 @@ new class extends Component {
     public string $roleFilter = "all";
     public ?int $editingUserId = null;
     public string $editingRole = "";
+    public string $editingStudentId = "";
+    public string $editingCourseCode = "";
 
     public bool $showCreateUserModal = false;
     public string $createName = "";
@@ -29,16 +32,22 @@ new class extends Component {
         $this->resetPage();
     }
 
-    public function startEditing(int $userId, string $currentRole): void
+    public function startEditing(int $userId): void
     {
-        $this->editingUserId = $userId;
-        $this->editingRole = $currentRole;
+        $user = User::findOrFail($userId);
+
+        $this->editingUserId = $user->id;
+        $this->editingRole = $user->role;
+        $this->editingStudentId = $user->student_id ?? "";
+        $this->editingCourseCode = $user->course_code ?? "";
     }
 
     public function cancelEditing(): void
     {
         $this->editingUserId = null;
         $this->editingRole = "";
+        $this->editingStudentId = "";
+        $this->editingCourseCode = "";
     }
 
     public function openCreateUserModal(): void
@@ -112,9 +121,9 @@ new class extends Component {
         $this->createRole = "faculty";
     }
 
-    public function updateRole(): void
+    public function updateUser(): void
     {
-        if (!$this->editingUserId) {
+        if (! $this->editingUserId) {
             return;
         }
 
@@ -127,13 +136,43 @@ new class extends Component {
             return;
         }
 
-        $user->update(["role" => $this->editingRole]);
+        $rules = [
+            "editingRole" => ["required", "in:student,faculty,admin"],
+        ];
+
+        if ($this->editingRole === "student") {
+            $rules["editingStudentId"] = [
+                "required",
+                "digits:10",
+                Rule::unique(User::class, "student_id")->ignore($user->id),
+            ];
+            $rules["editingCourseCode"] = [
+                "required",
+                Rule::in(array_keys(User::courseOptions())),
+            ];
+        }
+
+        $validated = $this->validate(
+            $rules,
+            [
+                "editingCourseCode.in" => "Please select a valid course.",
+            ],
+        );
+
+        $user->role = $validated["editingRole"];
+
+        if ($validated["editingRole"] === "student") {
+            $user->student_id = $validated["editingStudentId"];
+            $user->course_code = $validated["editingCourseCode"];
+        }
+
+        $user->save();
 
         session()->flash(
             "status",
-            "User role updated to {$this->editingRole}.",
+            "User updated successfully.",
         );
-        $this->dispatch("notify", message: "User role updated.");
+        $this->dispatch("notify", message: "User updated.");
         $this->cancelEditing();
     }
 
@@ -256,20 +295,21 @@ new class extends Component {
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         @forelse($users as $user)
             @php
-                $roleConfig = [
-                    'student' => ['color' => 'bg-indigo-50 text-indigo-700 ring-indigo-600/20', 'icon' => 'academic-cap'],
-                    'faculty' => ['color' => 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', 'icon' => 'user'],
-                    'admin' => ['color' => 'bg-purple-50 text-purple-700 ring-purple-600/20', 'icon' => 'shield-check'],
-                ];
-                $config = $roleConfig[$user->role] ?? $roleConfig['student'];
-                $initials = collect(explode(' ', $user->name))->map(fn($w) => strtoupper(substr($w, 0, 1)))->take(2)->join('');
+                $roleBadgeClass = $user->role === 'faculty'
+                    ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                    : ($user->role === 'admin'
+                        ? 'bg-purple-50 text-purple-700 ring-purple-600/20'
+                        : 'bg-indigo-50 text-indigo-700 ring-indigo-600/20');
+                $roleIcon = $user->role === 'faculty'
+                    ? 'user'
+                    : ($user->role === 'admin' ? 'shield-check' : 'academic-cap');
             @endphp
 
             <div class="flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
                 <div class="flex items-start justify-between gap-4">
                     <div class="flex items-center gap-3">
-                        <div class="h-10 w-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                            {{ $initials }}
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-sm font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                            {{ $user->initials() }}
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $user->name }}</p>
@@ -278,25 +318,59 @@ new class extends Component {
                     </div>
                 </div>
 
+                @if($user->role === 'student')
+                    <div class="mt-3 flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
+                        <div>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">Student ID:</span>
+                            <span class="text-gray-900 dark:text-gray-100">{{ $user->student_id ?? '—' }}</span>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">Course:</span>
+                            <span class="text-gray-900 dark:text-gray-100">
+                                {{ \App\Models\User::courseOptions()[$user->course_code] ?? $user->course_code ?? '—' }}
+                            </span>
+                        </div>
+                    </div>
+                @endif
+
                 <div class="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
                     <div class="flex items-center justify-between">
                         @if($editingUserId === $user->id)
-                            <div class="flex items-center gap-2">
-                                <select wire:model="editingRole" class="rounded-lg border-gray-300 py-1 text-xs dark:border-gray-600 dark:bg-slate-800 dark:text-gray-100">
-                                    <option value="student">Student</option>
-                                    <option value="faculty">Faculty</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                                <flux:button size="xs" variant="primary" icon="check" wire:click="updateRole" />
-                                <flux:button size="xs" variant="ghost" icon="x-mark" wire:click="cancelEditing" />
+                            <div class="flex flex-col gap-3">
+                                <div class="flex items-center gap-2">
+                                    <select wire:model="editingRole" class="rounded-lg border-gray-300 py-1 text-xs dark:border-gray-600 dark:bg-slate-800 dark:text-gray-100">
+                                        <option value="student">Student</option>
+                                        <option value="faculty">Faculty</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                    <flux:button size="xs" variant="primary" icon="check" wire:click="updateUser" />
+                                    <flux:button size="xs" variant="ghost" icon="x-mark" wire:click="cancelEditing" />
+                                </div>
+
+                                @if($editingRole === 'student')
+                                    <div class="grid gap-2">
+                                        <div>
+                                            <flux:input wire:model.defer="editingStudentId" label="Student ID" />
+                                            @error('editingStudentId') <p class="text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
+                                        </div>
+                                        <div>
+                                            <flux:select wire:model.defer="editingCourseCode" label="Course">
+                                                @foreach (\App\Models\User::courseOptions() as $code => $label)
+                                                    <flux:select.option value="{{ $code }}">{{ $code }} - {{ $label }}</flux:select.option>
+                                                @endforeach
+                                            </flux:select>
+                                            @error('editingCourseCode') <p class="text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         @else
-                            <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ $config['color'] }}">
-                                <flux:icon name="{{ $config['icon'] }}" class="size-3" />
+                            <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ $roleBadgeClass }}">
+                                <flux:icon name="{{ $roleIcon }}" class="size-3" />
                                 {{ ucfirst($user->role) }}
                             </span>
                             @if($user->id !== auth()->id())
-                                <flux:button size="xs" variant="ghost" icon="pencil" wire:click="startEditing({{ $user->id }}, '{{ $user->role }}')" />
+                                <flux:button size="xs" variant="ghost" icon="pencil" wire:click="startEditing({{ $user->id }})" />
                             @endif
                         @endif
                     </div>

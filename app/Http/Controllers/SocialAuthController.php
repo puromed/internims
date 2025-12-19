@@ -22,7 +22,7 @@ class SocialAuthController extends Controller
      */
     public function redirect(string $provider): RedirectResponse
     {
-        if (!in_array($provider, $this->providers)) {
+        if (! in_array($provider, $this->providers)) {
             abort(404);
         }
 
@@ -34,7 +34,7 @@ class SocialAuthController extends Controller
      */
     public function callback(string $provider): RedirectResponse
     {
-        if (!in_array($provider, $this->providers)) {
+        if (! in_array($provider, $this->providers)) {
             abort(404);
         }
 
@@ -42,7 +42,7 @@ class SocialAuthController extends Controller
             $socialUser = Socialite::driver($provider)->user();
         } catch (\Exception $e) {
             return redirect()->route('login')
-                ->with('error', 'Unable to authenticate with ' . ucfirst($provider) . '. Please try again.');
+                ->with('error', 'Unable to authenticate with '.ucfirst($provider).'. Please try again.');
         }
 
         // Check if this social account already exists
@@ -74,7 +74,7 @@ class SocialAuthController extends Controller
         }
 
         // For new users, validate email domain
-        if (!EmailDomainValidator::isAllowed($socialUser->getEmail())) {
+        if (! EmailDomainValidator::isAllowed($socialUser->getEmail())) {
             return redirect()->route('login')
                 ->with('error', EmailDomainValidator::getErrorMessage());
         }
@@ -86,6 +86,8 @@ class SocialAuthController extends Controller
             'password' => null, // OAuth-only user, no password
             'role' => 'student', // Default role for OAuth registrations
             'email_verified_at' => now(), // OAuth emails are pre-verified
+            'student_id' => null,
+            'course_code' => null,
         ]);
 
         // Link the social account
@@ -98,7 +100,7 @@ class SocialAuthController extends Controller
         Auth::login($user);
 
         // Send welcome notification to new users
-        $user->notify(new WelcomeNotification());
+        $user->notify(new WelcomeNotification);
 
         return redirect()->intended($this->getRedirectPath($user));
     }
@@ -108,6 +110,10 @@ class SocialAuthController extends Controller
      */
     protected function getRedirectPath(User $user): string
     {
+        if ($user->role === 'student' && (! $user->student_id || ! $user->course_code)) {
+            return route('profile.edit');
+        }
+
         return match ($user->role) {
             'admin' => route('admin.dashboard'),
             'faculty' => route('faculty.dashboard'),

@@ -29,12 +29,21 @@ class CreateNewUser implements CreatesNewUsers
                 'max:255',
                 Rule::unique(User::class),
                 function ($attribute, $value, $fail) {
-                    if (!EmailDomainValidator::isAllowed($value)) {
+                    if (! EmailDomainValidator::isAllowed($value)) {
                         $fail(EmailDomainValidator::getErrorMessage());
                     }
                 },
             ],
             'password' => $this->passwordRules(),
+            'student_id' => [
+                'required',
+                'digits:10',
+                Rule::unique(User::class, 'student_id'),
+            ],
+            'course_code' => [
+                'required',
+                Rule::in(array_keys(User::courseOptions())),
+            ],
         ])->validate();
 
         $user = User::create([
@@ -42,10 +51,12 @@ class CreateNewUser implements CreatesNewUsers
             'email' => $input['email'],
             'password' => $input['password'],
             'role' => 'student', // Default role for self-registration
+            'student_id' => trim($input['student_id']),
+            'course_code' => mb_strtoupper($input['course_code']),
         ]);
 
         // Send welcome notification
-        $user->notify(new WelcomeNotification());
+        $user->notify(new WelcomeNotification);
 
         return $user;
     }

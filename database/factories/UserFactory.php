@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -34,7 +35,8 @@ class UserFactory extends Factory
             'two_factor_recovery_codes' => Str::random(10),
             'two_factor_confirmed_at' => now(),
             'theme_preference' => 'system',
-
+            'student_id' => fake()->unique()->numerify('##########'),
+            'course_code' => fake()->randomElement(array_keys(User::courseOptions())),
         ];
     }
 
@@ -43,7 +45,11 @@ class UserFactory extends Factory
      */
     public function faculty(): static
     {
-        return $this->state(fn () => ['role' => 'faculty']);
+        return $this->state(fn () => [
+            'role' => 'faculty',
+            'student_id' => null,
+            'course_code' => null,
+        ]);
     }
 
     /**
@@ -51,7 +57,11 @@ class UserFactory extends Factory
      */
     public function admin(): static
     {
-        return $this->state(fn () => ['role' => 'admin']);
+        return $this->state(fn () => [
+            'role' => 'admin',
+            'student_id' => null,
+            'course_code' => null,
+        ]);
     }
 
     /**

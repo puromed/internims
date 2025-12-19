@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\ThemePreferenceController;
+use App\Http\Middleware\EnsureStudentProfileComplete;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
@@ -24,7 +25,7 @@ Route::get('/gallery', function () {
     return view('gallery');
 })->name('gallery');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', EnsureStudentProfileComplete::class])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
     // Student routes

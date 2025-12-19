@@ -9,14 +9,28 @@ use Livewire\Volt\Component;
 new class extends Component {
     public string $name = '';
     public string $email = '';
+    public string $studentId = '';
+    public string $courseCode = '';
+    public bool $canEditStudentFields = false;
 
     /**
      * Mount the component.
      */
     public function mount(): void
     {
-        $this->name = Auth::user()->name;
-        $this->email = Auth::user()->email;
+        $user = Auth::user();
+
+        $this->name = $user->name;
+        $this->email = $user->email;
+        $this->studentId = $user->student_id ?? '';
+        $this->courseCode = $user->course_code ?? '';
+        $this->canEditStudentFields = $this->shouldAllowStudentFieldEdit($user);
+    }
+
+    protected function shouldAllowStudentFieldEdit(User $user): bool
+    {
+        return $user->role === 'student'
+            && (! $user->student_id || ! $user->course_code);
     }
 
     /**
@@ -25,8 +39,9 @@ new class extends Component {
     public function updateProfileInformation(): void
     {
         $user = Auth::user();
+        $canEditStudentFields = $this->shouldAllowStudentFieldEdit($user);
 
-        $validated = $this->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
 
             'email' => [
@@ -37,15 +52,41 @@ new class extends Component {
                 'max:255',
                 Rule::unique(User::class)->ignore($user->id)
             ],
+        ];
+
+        if ($canEditStudentFields) {
+            $rules['studentId'] = [
+                'required',
+                'digits:10',
+                Rule::unique(User::class, 'student_id')->ignore($user->id),
+            ];
+            $rules['courseCode'] = [
+                'required',
+                Rule::in(array_keys(User::courseOptions())),
+            ];
+        }
+
+        $validated = $this->validate($rules);
+
+        $user->fill([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
         ]);
 
-        $user->fill($validated);
+        if ($canEditStudentFields) {
+            $user->student_id = $validated['studentId'];
+            $user->course_code = $validated['courseCode'];
+        }
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
         }
 
         $user->save();
+
+        $this->studentId = $user->student_id ?? '';
+        $this->courseCode = $user->course_code ?? '';
+        $this->canEditStudentFields = $this->shouldAllowStudentFieldEdit($user);
 
         $this->dispatch('profile-updated', name: $user->name);
     }
@@ -97,6 +138,47 @@ new class extends Component {
                     </div>
                 @endif
             </div>
+
+            @if (auth()->user()->role === 'student')
+                @php($courseOptions = \App\Models\User::courseOptions())
+
+                @if ($canEditStudentFields)
+                    <flux:input
+                        wire:model="studentId"
+                        :label="__('Student ID')"
+                        type="text"
+                        required
+                        inputmode="numeric"
+                        pattern="[0-9]{10}"
+                        maxlength="10"
+                        placeholder="e.g. 2021542287"
+                    />
+
+                    <flux:select wire:model="courseCode" :label="__('Course')" required>
+                        @foreach ($courseOptions as $code => $label)
+                            <flux:select.option value="{{ $code }}">
+                                {{ $code }} - {{ $label }}
+                            </flux:select.option>
+                        @endforeach
+                    </flux:select>
+                @else
+                    <div class="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-zinc-900 dark:text-gray-300">
+                        <div class="flex flex-col gap-2">
+                            <div>
+                                <span class="font-medium text-gray-900 dark:text-gray-100">{{ __('Student ID') }}:</span>
+                                <span>{{ $studentId }}</span>
+                            </div>
+                            <div>
+                                <span class="font-medium text-gray-900 dark:text-gray-100">{{ __('Course') }}:</span>
+                                <span>{{ $courseOptions[$courseCode] ?? $courseCode }}</span>
+                            </div>
+                        </div>
+                        <flux:text class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                            {{ __('Contact an admin if you need to update these details.') }}
+                        </flux:text>
+                    </div>
+                @endif
+            @endif
 
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-end">

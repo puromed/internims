@@ -26,6 +26,8 @@ class User extends Authenticatable
         'password',
         'role',
         'theme_preference',
+        'student_id',
+        'course_code',
     ];
 
     public function socialAccounts(): HasMany
@@ -59,6 +61,17 @@ class User extends Authenticatable
     }
 
     /**
+     * @return array<string, string>
+     */
+    public static function courseOptions(): array
+    {
+        return [
+            'CDIM262' => 'Information System Management',
+            'CDIM263' => 'Information Content Management',
+        ];
+    }
+
+    /**
      * Get the user's initials
      */
     public function initials(): string
@@ -66,7 +79,7 @@ class User extends Authenticatable
         return Str::of($this->name)
             ->explode(' ')
             ->take(2)
-            ->map(fn($word) => Str::substr($word, 0, 1))
+            ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
     }
 
@@ -110,7 +123,7 @@ class User extends Authenticatable
      */
     public function supervisesLogbookEntry(LogbookEntry $entry): bool
     {
-        if (!$this->isFaculty()) {
+        if (! $this->isFaculty()) {
             return false;
         }
 

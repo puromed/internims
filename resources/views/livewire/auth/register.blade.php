@@ -5,6 +5,8 @@
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
 
+        @php($courseOptions = \App\Models\User::courseOptions())
+
         <form method="POST" action="{{ route('register.store') }}" class="flex flex-col gap-6">
             @csrf
             <!-- Name -->
@@ -14,6 +16,28 @@
             <!-- Email Address -->
             <flux:input name="email" :label="__('Email address')" :value="old('email')" type="email" required
                 autocomplete="email" placeholder="email@example.com" />
+
+            <!-- Student ID -->
+            <flux:input
+                name="student_id"
+                :label="__('Student ID')"
+                :value="old('student_id')"
+                type="text"
+                required
+                inputmode="numeric"
+                pattern="[0-9]{10}"
+                maxlength="10"
+                placeholder="e.g. 2021542287"
+            />
+
+            <!-- Course -->
+            <flux:select name="course_code" :label="__('Course')" required>
+                @foreach ($courseOptions as $code => $label)
+                    <flux:select.option value="{{ $code }}" @selected(old('course_code') === $code)>
+                        {{ $code }} - {{ $label }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
 
             <!-- Password -->
             <flux:input name="password" :label="__('Password')" type="password" required autocomplete="new-password"
