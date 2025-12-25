@@ -1,11 +1,16 @@
 <?php
 
-use App\Models\Application;
+use App\Models\EligibilityDoc;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Component;
 
 new class extends Component {
+    /**
+     * @var array<int, string>
+     */
+    public array $requiredDocTypes = ['resume', 'transcript', 'offer_letter'];
+
     public string $search = '';
     public string $statusFilter = 'all';
     
@@ -31,74 +36,145 @@ new class extends Component {
         $this->showPdfModal = true;
     }
 
-    public function approve(int $applicationId): void
+    public function getOverallEligibilityStatus(User $student): string
     {
-        $application = Application::findOrFail($applicationId);
-        $application->update([
-            'eligibility_status' => 'approved',
-            'eligibility_reviewed_at' => now(),
-            'eligibility_reviewed_by' => auth()->id(),
-        ]);
+        $docs = $student->eligibilityDocs->keyBy('type');
 
-        $application->user->notify(new \App\Notifications\EligibilityStatusNotification($application, 'approved'));
+        $hasRejected = $docs->contains(fn (EligibilityDoc $doc) => $doc->status === 'rejected');
+        if ($hasRejected) {
+            return 'rejected';
+        }
 
-        $this->dispatch('start-toast', message: 'Application approved successfully.');
+        $allApproved = collect($this->requiredDocTypes)->every(
+            fn (string $type) => ($docs->get($type)?->status ?? '') === 'approved'
+        );
+
+        if ($allApproved) {
+            return 'approved';
+        }
+
+        return 'pending';
     }
 
-    public function reject(int $applicationId): void
+    public function hasAllRequiredDocs(User $student): bool
     {
-        $application = Application::findOrFail($applicationId);
-        $application->update([
-            'eligibility_status' => 'rejected',
-            'eligibility_reviewed_at' => now(),
-            'eligibility_reviewed_by' => auth()->id(),
-        ]);
+        $docs = $student->eligibilityDocs->keyBy('type');
 
-        $application->user->notify(new \App\Notifications\EligibilityStatusNotification($application, 'rejected'));
+        return collect($this->requiredDocTypes)->every(
+            fn (string $type) => filled($docs->get($type)?->path)
+        );
+    }
 
-        $this->dispatch('start-toast', message: 'Application rejected.');
+    public function approve(int $studentId): void
+    {
+        $student = User::query()
+            ->with('eligibilityDocs')
+            ->whereKey($studentId)
+            ->firstOrFail();
+
+        if (! $this->hasAllRequiredDocs($student)) {
+            $this->dispatch('start-toast', message: 'Cannot approve: student is missing required documents.');
+            return;
+        }
+
+        EligibilityDoc::query()
+            ->where('user_id', $student->id)
+            ->whereIn('type', $this->requiredDocTypes)
+            ->update([
+                'status' => 'approved',
+                'reviewed_at' => now(),
+            ]);
+
+        $student->notify(new \App\Notifications\EligibilityStatusNotification($student, 'approved'));
+
+        $this->dispatch('start-toast', message: 'Eligibility approved successfully.');
+    }
+
+    public function reject(int $studentId): void
+    {
+        $student = User::query()
+            ->with('eligibilityDocs')
+            ->whereKey($studentId)
+            ->firstOrFail();
+
+        EligibilityDoc::query()
+            ->where('user_id', $student->id)
+            ->whereIn('type', $this->requiredDocTypes)
+            ->update([
+                'status' => 'rejected',
+                'reviewed_at' => now(),
+            ]);
+
+        $student->notify(new \App\Notifications\EligibilityStatusNotification($student, 'rejected'));
+
+        $this->dispatch('start-toast', message: 'Eligibility rejected.');
     }
 
     public function approveAllPending(): void
     {
-        $pending = Application::where('eligibility_status', 'pending')->get();
-        
-        foreach ($pending as $application) {
-            $application->update([
-                'eligibility_status' => 'approved',
-                'eligibility_reviewed_at' => now(),
-                'eligibility_reviewed_by' => auth()->id(),
-            ]);
-            $application->user->notify(new \App\Notifications\EligibilityStatusNotification($application, 'approved'));
+        $students = User::query()
+            ->where('role', 'student')
+            ->whereHas('eligibilityDocs')
+            ->with('eligibilityDocs')
+            ->get()
+            ->filter(fn (User $student) => $this->getOverallEligibilityStatus($student) === 'pending')
+            ->filter(fn (User $student) => $this->hasAllRequiredDocs($student));
+
+        foreach ($students as $student) {
+            EligibilityDoc::query()
+                ->where('user_id', $student->id)
+                ->whereIn('type', $this->requiredDocTypes)
+                ->update([
+                    'status' => 'approved',
+                    'reviewed_at' => now(),
+                ]);
+
+            $student->notify(new \App\Notifications\EligibilityStatusNotification($student, 'approved'));
         }
 
-        $this->dispatch('start-toast', message: $pending->count() . ' applications approved.');
+        $this->dispatch('start-toast', message: $students->count() . ' students approved.');
     }
 
     public function with(): array
     {
-        $query = Application::query()
-            ->with(['user'])
-            ->latest();
+        $countsStudents = User::query()
+            ->where('role', 'student')
+            ->whereHas('eligibilityDocs')
+            ->with(['eligibilityDocs' => fn ($query) => $query->whereIn('type', $this->requiredDocTypes)])
+            ->get();
 
-        if ($this->statusFilter !== 'all') {
-            $query->where('eligibility_status', $this->statusFilter);
-        }
+        $counts = [
+            'all' => $countsStudents->count(),
+            'pending' => $countsStudents->filter(fn (User $student) => $this->getOverallEligibilityStatus($student) === 'pending')->count(),
+            'approved' => $countsStudents->filter(fn (User $student) => $this->getOverallEligibilityStatus($student) === 'approved')->count(),
+            'rejected' => $countsStudents->filter(fn (User $student) => $this->getOverallEligibilityStatus($student) === 'rejected')->count(),
+        ];
+
+        $students = User::query()
+            ->where('role', 'student')
+            ->whereHas('eligibilityDocs')
+            ->with(['eligibilityDocs' => fn ($query) => $query->whereIn('type', $this->requiredDocTypes)])
+            ->latest()
+            ->get();
 
         if ($this->search !== '') {
-            $query->whereHas('user', fn($q) => $q->where('name', 'like', '%' . $this->search . '%'));
+            $students = $students->filter(function (User $student): bool {
+                $search = mb_strtolower($this->search);
+
+                return str_contains(mb_strtolower($student->name), $search)
+                    || str_contains(mb_strtolower($student->email), $search);
+            });
         }
 
-        $applications = $query->get();
+        if ($this->statusFilter !== 'all') {
+            $students = $students->filter(
+                fn (User $student) => $this->getOverallEligibilityStatus($student) === $this->statusFilter
+            );
+        }
 
         return [
-            'applications' => $applications,
-            'counts' => [
-                'all' => Application::count(),
-                'pending' => Application::where('eligibility_status', 'pending')->count(),
-                'approved' => Application::where('eligibility_status', 'approved')->count(),
-                'rejected' => Application::where('eligibility_status', 'rejected')->count(),
-            ],
+            'students' => $students,
+            'counts' => $counts,
         ];
     }
 }; ?>
@@ -211,40 +287,42 @@ new class extends Component {
         </div>
     </div>
 
-    {{-- Queue --}}
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        @forelse($applications as $application)
-            @php
-                $status = $application->eligibility_status ?? 'pending';
-                $initials = collect(explode(' ', $application->user->name ?? 'U'))->map(fn($w) => strtoupper(substr($w, 0, 1)))->take(2)->join('');
-                
-                $statusConfig = [
-                    'pending' => ['label' => 'Pending', 'color' => 'bg-amber-50 text-amber-600 ring-amber-100', 'icon' => 'clock'],
-                    'approved' => ['label' => 'Approved', 'color' => 'bg-emerald-50 text-emerald-600 ring-emerald-100', 'icon' => 'check-circle'],
-                    'rejected' => ['label' => 'Rejected', 'color' => 'bg-rose-50 text-rose-600 ring-rose-100', 'icon' => 'x-circle'],
-                ];
-                $style = $statusConfig[$status] ?? $statusConfig['pending'];
-                
-                // Documents Status
-                $docs = [
-                    'resume' => ['label' => 'Resume/CV', 'path' => $application->resume_path, 'required' => true],
-                    'transcript' => ['label' => 'Transcript', 'path' => $application->transcript_path, 'required' => true],
-                    'advisor' => ['label' => 'Advisor Approval', 'path' => $application->advisor_letter_path, 'required' => true],
-                ];
-            @endphp
+	    {{-- Queue --}}
+	    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+	        @forelse($students as $student)
+	            @php
+	                $docsByType = $student->eligibilityDocs->keyBy('type');
+	                $status = $this->getOverallEligibilityStatus($student);
+	                $canApprove = $this->hasAllRequiredDocs($student);
+	                $initials = collect(explode(' ', $student->name ?? 'U'))->map(fn($w) => strtoupper(substr($w, 0, 1)))->take(2)->join('');
+	                
+	                $statusConfig = [
+	                    'pending' => ['label' => 'Pending', 'color' => 'bg-amber-50 text-amber-600 ring-amber-100', 'icon' => 'clock'],
+	                    'approved' => ['label' => 'Approved', 'color' => 'bg-emerald-50 text-emerald-600 ring-emerald-100', 'icon' => 'check-circle'],
+	                    'rejected' => ['label' => 'Rejected', 'color' => 'bg-rose-50 text-rose-600 ring-rose-100', 'icon' => 'x-circle'],
+	                ];
+	                $style = $statusConfig[$status] ?? $statusConfig['pending'];
+	                
+	                // Documents Status
+	                $docs = [
+	                    'resume' => ['label' => 'Resume', 'doc' => $docsByType->get('resume')],
+	                    'transcript' => ['label' => 'Transcript', 'doc' => $docsByType->get('transcript')],
+	                    'offer_letter' => ['label' => 'Offer Letter', 'doc' => $docsByType->get('offer_letter')],
+	                ];
+	            @endphp
 
             <div class="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
                 {{-- Card Header --}}
-                <div class="flex items-start justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="h-10 w-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                            {{ $initials }}
-                        </div>
-                        <div>
-                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $application->user->name }}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Computer Science · {{ $application->user->email }}</p>
-                        </div>
-                    </div>
+	                <div class="flex items-start justify-between">
+	                    <div class="flex items-center gap-3">
+	                        <div class="h-10 w-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+	                            {{ $initials }}
+	                        </div>
+	                        <div>
+	                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $student->name }}</p>
+	                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ $student->email }}</p>
+	                        </div>
+	                    </div>
                     <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset {{ $style['color'] }}">
                         <flux:icon name="{{ $style['icon'] }}" class="size-3.5" />
                         {{ $style['label'] }}
@@ -252,57 +330,64 @@ new class extends Component {
                 </div>
 
                 {{-- Documents Grid --}}
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    @foreach($docs as $type => $doc)
-                        @php $uploaded = !empty($doc['path']); @endphp
-                        <div class="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-3 flex flex-col justify-between gap-2 bg-gray-50/50 dark:bg-slate-900/50">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ $doc['label'] }}</span>
-                                <span class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset {{ $uploaded ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-rose-50 text-rose-700 ring-rose-600/20' }}">
-                                    {{ $uploaded ? 'Uploaded' : 'Missing' }}
-                                </span>
-                            </div>
-                            
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2 text-xs text-gray-500">
-                                    <flux:icon name="document-text" class="size-4 text-gray-400" />
-                                    <span class="truncate max-w-[100px]">{{ $uploaded ? basename($doc['path']) : 'Required' }}</span>
-                                </div>
-                                @if($uploaded)
-                                    <flux:button variant="ghost" size="xs" icon="eye" wire:click="openPdfPreview('{{ $doc['path'] }}')" />
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
+	                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+	                    @foreach($docs as $type => $doc)
+	                        @php
+	                            $uploaded = filled($doc['doc']?->path);
+	                            $docStatus = $doc['doc']?->status ?? 'missing';
+	                            $badge = match ($docStatus) {
+	                                'approved' => ['label' => 'Approved', 'class' => 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'],
+	                                'rejected' => ['label' => 'Rejected', 'class' => 'bg-rose-50 text-rose-700 ring-rose-600/20'],
+	                                'pending' => ['label' => 'Pending', 'class' => 'bg-amber-50 text-amber-700 ring-amber-600/20'],
+	                                default => ['label' => 'Missing', 'class' => 'bg-zinc-50 text-zinc-600 ring-zinc-600/10 dark:bg-zinc-800 dark:text-zinc-300'],
+	                            };
+	                        @endphp
+	                        <div class="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-3 flex flex-col justify-between gap-2 bg-gray-50/50 dark:bg-slate-900/50">
+	                            <div class="flex items-center justify-between">
+	                                <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ $doc['label'] }}</span>
+	                                <span class="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset {{ $badge['class'] }}">
+	                                    {{ $badge['label'] }}
+	                                </span>
+	                            </div>
+	                            
+	                            <div class="flex items-center justify-between">
+	                                <div class="flex items-center gap-2 text-xs text-gray-500">
+	                                    <flux:icon name="document-text" class="size-4 text-gray-400" />
+	                                    <span class="truncate max-w-[100px]">{{ $uploaded ? basename($doc['doc']->path) : 'Required' }}</span>
+	                                </div>
+	                                @if($uploaded)
+	                                    <flux:button variant="ghost" size="xs" icon="eye" wire:click="openPdfPreview('{{ $doc['doc']->path }}')" />
+	                                @endif
+	                            </div>
+	                        </div>
+	                    @endforeach
+	                </div>
 
                 <div class="border-t border-gray-100 dark:border-gray-700"></div>
 
                 {{-- Action Footer --}}
-                <div class="flex items-center justify-between pt-2">
-                    <div class="flex items-center gap-2 text-xs text-gray-500">
-                        @if($status === 'pending')
-                            <span>Submitted {{ $application->created_at->format('M d') }}</span>
-                        @else
-                            <span>Reviewed {{ $application->eligibility_reviewed_at?->format('M d') }}</span>
-                        @endif
-                    </div>
-                    
-                    @if($status === 'pending')
-                        <div class="flex items-center gap-2">
-                            <flux:button size="sm" variant="danger" wire:click="reject({{ $application->id }})" wire:confirm="Reject this application?">Reject</flux:button>
-                            <flux:button size="sm" variant="primary" wire:click="approve({{ $application->id }})">Approve</flux:button>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        @empty
+	                <div class="flex items-center justify-between pt-2">
+	                    <div class="flex items-center gap-2 text-xs text-gray-500">
+	                        <span>Last update {{ $student->eligibilityDocs->max('updated_at')?->format('M d') }}</span>
+	                    </div>
+	                    
+	                    @if($status === 'pending')
+	                        <div class="flex items-center gap-2">
+	                            <flux:button size="sm" variant="danger" wire:click="reject({{ $student->id }})" wire:confirm="Reject this student's eligibility?">Reject</flux:button>
+	                            <flux:button size="sm" variant="primary" wire:click="approve({{ $student->id }})" :disabled="! $canApprove">
+	                                Approve
+	                            </flux:button>
+	                        </div>
+	                    @endif
+	                </div>
+	            </div>
+	        @empty
             <div class="col-span-full py-12 text-center rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-zinc-900">
                 <div class="flex flex-col items-center justify-center gap-2">
                     <flux:icon name="document-magnifying-glass" class="size-10 text-zinc-300" />
                     <p class="text-sm font-medium text-zinc-500">No applications match your search.</p>
                 </div>
             </div>
-        @endforelse
-    </div>
-</div>
+	        @endforelse
+	    </div>
+	</div>

@@ -5,12 +5,14 @@ use App\Models\Internship;
 use Livewire\Volt\Component;
 
 new class extends Component {
-    public string $search = '';
+    public string $search = "";
     public ?int $editingInternshipId = null;
     public ?int $selectedFacultyId = null;
 
-    public function startEditing(int $internshipId, ?int $currentFacultyId): void
-    {
+    public function startEditing(
+        int $internshipId,
+        ?int $currentFacultyId,
+    ): void {
         $this->editingInternshipId = $internshipId;
         $this->selectedFacultyId = $currentFacultyId;
     }
@@ -23,38 +25,99 @@ new class extends Component {
 
     public function assignFaculty(): void
     {
-        if (!$this->editingInternshipId) return;
+        if (!$this->editingInternshipId) {
+            return;
+        }
 
         $internship = Internship::findOrFail($this->editingInternshipId);
-        $internship->update(['faculty_supervisor_id' => $this->selectedFacultyId]);
+        $internship->update([
+            "faculty_supervisor_id" => $this->selectedFacultyId,
+            "status" => $this->selectedFacultyId ? "active" : "pending",
+        ]);
 
-        $facultyName = $this->selectedFacultyId 
-            ? User::find($this->selectedFacultyId)?->name ?? 'Unknown'
-            : 'None';
+        $facultyName = $this->selectedFacultyId
+            ? User::find($this->selectedFacultyId)?->name ?? "Unknown"
+            : "None";
 
-        session()->flash('status', "Faculty supervisor updated to {$facultyName}.");
-        $this->dispatch('notify', message: 'Faculty assignment updated.');
+        session()->flash(
+            "status",
+            "Faculty supervisor updated to {$facultyName}.",
+        );
+        $this->dispatch("notify", message: "Faculty assignment updated.");
         $this->cancelEditing();
+    }
+
+    public function autoAssign(): void
+    {
+        $facultyIds = User::query()
+            ->where("role", "faculty")
+            ->pluck("id")
+            ->shuffle()
+            ->values();
+
+        if ($facultyIds->isEmpty()) {
+            $this->dispatch(
+                "notify",
+                message: "No faculty users found to assign.",
+            );
+            return;
+        }
+
+        $internships = Internship::query()
+            ->whereIn("status", ["pending", "active"])
+            ->whereNull("faculty_supervisor_id")
+            ->inRandomOrder()
+            ->get();
+
+        if ($internships->isEmpty()) {
+            $this->dispatch(
+                "notify",
+                message: "All internships already have supervisors assigned.",
+            );
+            return;
+        }
+
+        $facultyCount = $facultyIds->count();
+
+        foreach ($internships as $index => $internship) {
+            $internship->update([
+                "faculty_supervisor_id" => $facultyIds[$index % $facultyCount],
+                "status" => "active",
+            ]);
+        }
+
+        $this->dispatch("notify", message: "Faculty supervisors assigned.");
     }
 
     public function with(): array
     {
         $query = Internship::query()
-            ->with(['user', 'facultySupervisor'])
-            ->where('status', 'active')
+            ->with(["user", "facultySupervisor"])
+            ->whereIn("status", ["pending", "active"])
             ->latest();
 
-        if ($this->search !== '') {
-            $query->whereHas('user', fn($q) => $q->where('name', 'like', '%' . $this->search . '%'));
+        if ($this->search !== "") {
+            $query->whereHas(
+                "user",
+                fn($q) => $q->where("name", "like", "%" . $this->search . "%"),
+            );
         }
 
         return [
-            'internships' => $query->get(),
-            'facultyList' => User::where('role', 'faculty')->orderBy('name')->get(),
-            'unassignedCount' => Internship::where('status', 'active')->whereNull('faculty_supervisor_id')->count(),
+            "internships" => $query->get(),
+            "facultyList" => User::where("role", "faculty")
+                ->orderBy("name")
+                ->get(),
+            "unassignedCount" => Internship::whereIn("status", [
+                "pending",
+                "active",
+            ])
+                ->whereNull("faculty_supervisor_id")
+                ->count(),
         ];
     }
-}; ?>
+};
+?>
 
 <div class="space-y-6">
     {{-- Header --}}
@@ -64,18 +127,31 @@ new class extends Component {
             <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Faculty Assignments</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">Assign faculty supervisors to students.</p>
         </div>
+        <div class="flex items-center gap-2">
+            @if($unassignedCount > 0)
+                <flux:button
+                    size="sm"
+                    variant="primary"
+                    icon="sparkles"
+                    wire:click="autoAssign"
+                    wire:confirm="Auto-assign faculty supervisors to {{ $unassignedCount }} unassigned internship(s)?"
+                >
+                    Auto assign
+                </flux:button>
+            @endif
         @if($unassignedCount > 0)
             <div class="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-1 text-sm font-medium text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
                 <flux:icon name="exclamation-circle" class="size-4" />
                 {{ $unassignedCount }} student(s) without supervisor
             </div>
         @endif
+        </div>
     </div>
 
      {{-- Stats Overview --}}
      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div class="flex flex-col gap-1 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
-            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Active Internships</span>
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Internships</span>
             <span class="text-2xl font-bold text-gray-900 dark:text-white">{{ $internships->count() }}</span>
         </div>
         <div class="flex flex-col gap-1 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm dark:border-emerald-500/20 dark:bg-emerald-500/5">

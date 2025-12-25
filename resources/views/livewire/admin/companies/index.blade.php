@@ -1,85 +1,161 @@
 <?php
 
 use App\Models\ProposedCompany;
+use App\Notifications\ProposedCompanyStatusNotification;
 use Livewire\Volt\Component;
 
 new class extends Component {
-    public string $search = '';
-    public string $statusFilter = 'all';
+    public string $search = "";
+    public string $statusFilter = "all";
 
     // Remarks Modal State
     public bool $showRemarksModal = false;
     public ?int $rejectingProposalId = null;
-    public string $adminRemarks = '';
+    public string $adminRemarks = "";
 
     public function updatedSearch(): void {}
     public function updatedStatusFilter(): void {}
 
     public function approve(int $proposalId): void
     {
-        $proposal = ProposedCompany::findOrFail($proposalId);
+        $proposal = ProposedCompany::query()
+            ->with("application.user")
+            ->findOrFail($proposalId);
+        $previousStatus = $proposal->status;
+
         $proposal->update([
-            'status' => 'approved',
-            'admin_remarks' => null,
+            "status" => "approved",
+            "admin_remarks" => null,
         ]);
 
-        $this->dispatch('start-toast', message: 'Company proposal approved.');
+        if ($previousStatus !== "approved") {
+            $student = $proposal->application?->user;
+
+            if ($student) {
+                $student->notify(
+                    new ProposedCompanyStatusNotification(
+                        proposal: $proposal,
+                        status: "approved",
+                        remark: null,
+                    ),
+                );
+            }
+        }
+
+        $this->dispatch("start-toast", message: "Company proposal approved.");
     }
 
     public function openRejectModal(int $proposalId): void
     {
         $this->rejectingProposalId = $proposalId;
-        $this->adminRemarks = '';
+        $this->adminRemarks = "";
         $this->showRemarksModal = true;
     }
 
     public function confirmReject(): void
     {
-        if (!$this->rejectingProposalId) return;
+        if (!$this->rejectingProposalId) {
+            return;
+        }
 
-        $proposal = ProposedCompany::findOrFail($this->rejectingProposalId);
+        $proposal = ProposedCompany::query()
+            ->with("application.user")
+            ->findOrFail($this->rejectingProposalId);
+
+        $previousStatus = $proposal->status;
+
         $proposal->update([
-            'status' => 'rejected',
-            'admin_remarks' => $this->adminRemarks ?: null,
+            "status" => "rejected",
+            "admin_remarks" => $this->adminRemarks ?: null,
         ]);
+
+        if ($previousStatus !== "rejected") {
+            $student = $proposal->application?->user;
+
+            if ($student) {
+                $student->notify(
+                    new ProposedCompanyStatusNotification(
+                        proposal: $proposal,
+                        status: "rejected",
+                        remark: $proposal->admin_remarks,
+                    ),
+                );
+            }
+        }
 
         $this->showRemarksModal = false;
         $this->rejectingProposalId = null;
-        $this->adminRemarks = '';
+        $this->adminRemarks = "";
 
-        $this->dispatch('start-toast', message: 'Company proposal rejected.');
+        $this->dispatch("start-toast", message: "Company proposal rejected.");
     }
 
     public function with(): array
     {
         $query = ProposedCompany::query()
-            ->with(['application.user'])
+            ->with(["application.user"])
             ->latest();
 
-        if ($this->statusFilter !== 'all') {
-            $query->where('status', $this->statusFilter);
-        }
-
-        if ($this->search !== '') {
+        if ($this->search !== "") {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                  ->orWhereHas('application.user', fn($u) => $u->where('name', 'like', '%' . $this->search . '%'));
+                $q->where(
+                    "name",
+                    "like",
+                    "%" . $this->search . "%",
+                )->orWhereHas(
+                    "application.user",
+                    fn($u) => $u->where(
+                        "name",
+                        "like",
+                        "%" . $this->search . "%",
+                    ),
+                );
             });
         }
 
-        $proposals = $query->get();
+        $proposals = $query
+            ->get()
+            ->filter(
+                fn(ProposedCompany $proposal): bool => (bool) $proposal
+                    ->application?->user,
+            );
 
         return [
-            'proposals' => $proposals,
-            'counts' => [
-                'all' => ProposedCompany::count(),
-                'pending' => ProposedCompany::where('status', 'pending')->count(),
-                'approved' => ProposedCompany::where('status', 'approved')->count(),
-                'rejected' => ProposedCompany::where('status', 'rejected')->count(),
+            "proposalGroups" => $proposals
+                ->groupBy(
+                    fn(ProposedCompany $proposal): int => (int) $proposal
+                        ->application->user_id,
+                )
+                ->when(
+                    $this->statusFilter !== "all",
+                    fn($groups) => $groups->filter(
+                        fn($group) => $group->contains(
+                            fn(
+                                ProposedCompany $proposal,
+                            ): bool => $proposal->status ===
+                                $this->statusFilter,
+                        ),
+                    ),
+                ),
+            "counts" => [
+                "all" => ProposedCompany::count(),
+                "pending" => ProposedCompany::where(
+                    "status",
+                    "pending",
+                )->count(),
+                "approved" => ProposedCompany::where(
+                    "status",
+                    "approved",
+                )->count(),
+                "rejected" => ProposedCompany::where(
+                    "status",
+                    "rejected",
+                )->count(),
             ],
         ];
     }
-}; ?>
+};
+?>
 
 <div class="space-y-6">
     {{-- Toast Notification --}}
@@ -108,9 +184,9 @@ new class extends Component {
                 <p class="text-sm text-gray-500 dark:text-gray-400">Provide a reason for rejection (optional but recommended).</p>
             </div>
 
-            <flux:textarea 
-                wire:model="adminRemarks" 
-                label="Remarks" 
+            <flux:textarea
+                wire:model="adminRemarks"
+                label="Remarks"
                 placeholder="e.g., Company does not align with program requirements..."
                 rows="3"
             />
@@ -167,86 +243,107 @@ new class extends Component {
 
     {{-- Proposals Grid --}}
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        @forelse($proposals as $proposal)
+        @forelse($proposalGroups as $studentProposals)
             @php
-                $user = $proposal->application?->user;
-                $initials = $user ? collect(explode(' ', $user->name))->map(fn($w) => strtoupper(substr($w, 0, 1)))->take(2)->join('') : 'N/A';
-                
+                $user = $studentProposals->first()?->application?->user;
+                $initials = $user
+                    ? collect(explode(' ', $user->name))
+                        ->map(fn($w) => strtoupper(substr($w, 0, 1)))
+                        ->take(2)
+                        ->join('')
+                    : 'N/A';
+
+                $pendingCount = $studentProposals->where('status', 'pending')->count();
+                $approvedCount = $studentProposals->where('status', 'approved')->count();
+                $rejectedCount = $studentProposals->where('status', 'rejected')->count();
+
+                $groupStatus = $pendingCount > 0 ? 'pending' : (($approvedCount > 0 && $rejectedCount > 0) ? 'mixed' : ($approvedCount > 0 ? 'approved' : 'rejected'));
+
                 $statusConfig = [
                     'pending' => ['label' => 'Pending', 'color' => 'bg-amber-50 text-amber-600 ring-amber-100', 'icon' => 'clock'],
                     'approved' => ['label' => 'Approved', 'color' => 'bg-emerald-50 text-emerald-600 ring-emerald-100', 'icon' => 'check-circle'],
                     'rejected' => ['label' => 'Rejected', 'color' => 'bg-rose-50 text-rose-600 ring-rose-100', 'icon' => 'x-circle'],
+                    'mixed' => ['label' => 'Mixed', 'color' => 'bg-zinc-50 text-zinc-700 ring-zinc-200', 'icon' => 'arrows-right-left'],
                 ];
-                $style = $statusConfig[$proposal->status] ?? $statusConfig['pending'];
+                $style = $statusConfig[$groupStatus] ?? $statusConfig['pending'];
             @endphp
 
             <div class="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
                 {{-- Card Header: Student Info --}}
-                <div class="flex items-start justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="h-10 w-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="h-10 w-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold text-zinc-700 dark:text-zinc-300 shrink-0">
                             {{ $initials }}
                         </div>
-                        <div>
-                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $user?->name ?? 'Unknown' }}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ $user?->email ?? '' }}</p>
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{{ $user?->name ?? 'Unknown' }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ $user?->email ?? '' }}</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {{ $pendingCount }} pending • {{ $approvedCount }} approved • {{ $rejectedCount }} rejected
+                            </p>
                         </div>
                     </div>
-                    <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset {{ $style['color'] }}">
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset {{ $style['color'] }} shrink-0">
                         <flux:icon name="{{ $style['icon'] }}" class="size-3.5" />
                         {{ $style['label'] }}
                     </span>
                 </div>
 
-                {{-- Company Details --}}
-                <div class="space-y-3 rounded-lg bg-gray-50 dark:bg-zinc-800/50 p-4">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Company</p>
-                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ $proposal->name }}</p>
+                <div class="space-y-3">
+                    @foreach($studentProposals as $proposal)
+                        @php
+                            $proposalStatusStyle = $statusConfig[$proposal->status] ?? $statusConfig['pending'];
+                        @endphp
+
+                        <div class="rounded-lg bg-gray-50 dark:bg-zinc-800/50 p-4 space-y-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $proposal->name }}</p>
+                                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset {{ $proposalStatusStyle['color'] }}">
+                                            <flux:icon name="{{ $proposalStatusStyle['icon'] }}" class="size-3" />
+                                            {{ $proposalStatusStyle['label'] }}
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Submitted {{ $proposal->created_at->diffForHumans() }}</p>
+                                </div>
+
+                                <div class="flex items-center gap-2 shrink-0">
+                                    @if($proposal->website)
+                                        <a href="{{ $proposal->website }}" target="_blank" class="text-xs text-indigo-600 hover:underline dark:text-indigo-400">
+                                            Website →
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
+
+                            @if($proposal->address)
+                                <div>
+                                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Address</p>
+                                    <p class="text-sm text-gray-700 dark:text-gray-300">{{ $proposal->address }}</p>
+                                </div>
+                            @endif
+
+                            <div>
+                                <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Job Scope</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">{{ $proposal->job_scope }}</p>
+                            </div>
+
+                            @if($proposal->status === 'rejected' && $proposal->admin_remarks)
+                                <div class="rounded-lg bg-rose-50 dark:bg-rose-900/20 p-3 border border-rose-100 dark:border-rose-800">
+                                    <p class="text-xs font-medium text-rose-600 dark:text-rose-400">Rejection Reason</p>
+                                    <p class="text-sm text-rose-700 dark:text-rose-300">{{ $proposal->admin_remarks }}</p>
+                                </div>
+                            @endif
+
+                            @if($proposal->status === 'pending')
+                                <div class="flex items-center justify-end gap-2">
+                                    <flux:button size="sm" variant="danger" wire:click="openRejectModal({{ $proposal->id }})">Reject</flux:button>
+                                    <flux:button size="sm" variant="primary" wire:click="approve({{ $proposal->id }})">Approve</flux:button>
+                                </div>
+                            @endif
                         </div>
-                        @if($proposal->website)
-                            <a href="{{ $proposal->website }}" target="_blank" class="text-xs text-indigo-600 hover:underline dark:text-indigo-400">
-                                Visit Website →
-                            </a>
-                        @endif
-                    </div>
-
-                    @if($proposal->address)
-                        <div>
-                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Address</p>
-                            <p class="text-sm text-gray-700 dark:text-gray-300">{{ $proposal->address }}</p>
-                        </div>
-                    @endif
-
-                    <div>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Job Scope</p>
-                        <p class="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">{{ $proposal->job_scope }}</p>
-                    </div>
-                </div>
-
-                {{-- Admin Remarks (if rejected) --}}
-                @if($proposal->status === 'rejected' && $proposal->admin_remarks)
-                    <div class="rounded-lg bg-rose-50 dark:bg-rose-900/20 p-3 border border-rose-100 dark:border-rose-800">
-                        <p class="text-xs font-medium text-rose-600 dark:text-rose-400">Rejection Reason</p>
-                        <p class="text-sm text-rose-700 dark:text-rose-300">{{ $proposal->admin_remarks }}</p>
-                    </div>
-                @endif
-
-                <div class="border-t border-gray-100 dark:border-gray-700"></div>
-
-                {{-- Action Footer --}}
-                <div class="flex items-center justify-between pt-2">
-                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                        Submitted {{ $proposal->created_at->diffForHumans() }}
-                    </span>
-                    
-                    @if($proposal->status === 'pending')
-                        <div class="flex items-center gap-2">
-                            <flux:button size="sm" variant="danger" wire:click="openRejectModal({{ $proposal->id }})">Reject</flux:button>
-                            <flux:button size="sm" variant="primary" wire:click="approve({{ $proposal->id }})">Approve</flux:button>
-                        </div>
-                    @endif
+                    @endforeach
                 </div>
             </div>
         @empty

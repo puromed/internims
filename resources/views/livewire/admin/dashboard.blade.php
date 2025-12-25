@@ -2,23 +2,76 @@
 
 use App\Models\User;
 use App\Models\Internship;
-use App\Models\Application;
 use App\Models\LogbookEntry;
+use Illuminate\Support\Collection;
 use Livewire\Volt\Component;
 
 new class extends Component {
     public function with(): array
     {
+        /** @var array<int, string> $requiredDocTypes */
+        $requiredDocTypes = ["resume", "transcript", "offer_letter"];
+
+        $studentsWithEligibilityDocs = User::query()
+            ->where("role", "student")
+            ->whereHas("eligibilityDocs")
+            ->with([
+                "eligibilityDocs" => fn($query) => $query->whereIn(
+                    "type",
+                    $requiredDocTypes,
+                ),
+            ])
+            ->get();
+
+        $getOverallEligibilityStatus = function (User $student) use (
+            $requiredDocTypes,
+        ): string {
+            /** @var Collection<int, \App\Models\EligibilityDoc> $docs */
+            $docs = $student->eligibilityDocs->keyBy("type");
+
+            $hasRejected = $docs->contains(
+                fn($doc): bool => $doc->status === "rejected",
+            );
+
+            if ($hasRejected) {
+                return "rejected";
+            }
+
+            $allApproved = collect($requiredDocTypes)->every(
+                fn(string $type): bool => ($docs->get($type)?->status ?? "") ===
+                    "approved",
+            );
+
+            if ($allApproved) {
+                return "approved";
+            }
+
+            return "pending";
+        };
+
         return [
-            'totalStudents' => User::where('role', 'student')->count(),
-            'totalFaculty' => User::where('role', 'faculty')->count(),
-            'totalAdmins' => User::where('role', 'admin')->count(),
-            'pendingEligibility' => Application::where('eligibility_status', 'pending')->count(),
-            'activeInternships' => Internship::where('status', 'active')->count(),
-            'pendingLogbooks' => LogbookEntry::where('supervisor_status', 'pending')->count(),
+            "totalStudents" => User::where("role", "student")->count(),
+            "totalFaculty" => User::where("role", "faculty")->count(),
+            "totalAdmins" => User::where("role", "admin")->count(),
+            "pendingEligibility" => $studentsWithEligibilityDocs
+                ->filter(
+                    fn(User $student): bool => $getOverallEligibilityStatus(
+                        $student,
+                    ) === "pending",
+                )
+                ->count(),
+            "activeInternships" => Internship::query()
+                ->whereIn("status", ["pending", "active"])
+                ->whereNotNull("faculty_supervisor_id")
+                ->count(),
+            "pendingLogbooks" => LogbookEntry::where(
+                "supervisor_status",
+                "pending",
+            )->count(),
         ];
     }
-}; ?>
+};
+?>
 
 <div class="space-y-6">
     {{-- Header --}}
@@ -45,7 +98,7 @@ new class extends Component {
                     <flux:icon name="users" class="size-5 text-indigo-600 dark:text-indigo-400" />
                 </div>
             </div>
-            
+
             <div class="grid grid-cols-3 gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
                 <div class="text-center">
                     <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ $totalStudents }}</p>
