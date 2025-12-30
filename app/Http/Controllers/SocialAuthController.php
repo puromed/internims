@@ -22,7 +22,7 @@ class SocialAuthController extends Controller
      */
     public function redirect(string $provider): RedirectResponse
     {
-        if (!in_array($provider, $this->providers)) {
+        if (! in_array($provider, $this->providers)) {
             abort(404);
         }
 
@@ -34,7 +34,7 @@ class SocialAuthController extends Controller
      */
     public function callback(string $provider): RedirectResponse
     {
-        if (!in_array($provider, $this->providers)) {
+        if (! in_array($provider, $this->providers)) {
             abort(404);
         }
 
@@ -42,7 +42,7 @@ class SocialAuthController extends Controller
             $socialUser = Socialite::driver($provider)->user();
         } catch (\Exception $e) {
             return redirect()->route('login')
-                ->with('error', 'Unable to authenticate with ' . ucfirst($provider) . '. Please try again.');
+                ->with('error', 'Unable to authenticate with '.ucfirst($provider).'. Please try again.');
         }
 
         // Check if this social account already exists
@@ -74,7 +74,7 @@ class SocialAuthController extends Controller
         }
 
         // For new users, validate email domain
-        if (!EmailDomainValidator::isAllowed($socialUser->getEmail())) {
+        if (! EmailDomainValidator::isAllowed($socialUser->getEmail())) {
             return redirect()->route('login')
                 ->with('error', EmailDomainValidator::getErrorMessage());
         }
@@ -98,7 +98,7 @@ class SocialAuthController extends Controller
         Auth::login($user);
 
         // Send welcome notification to new users
-        $user->notify(new WelcomeNotification());
+        $user->notify(new WelcomeNotification);
 
         return redirect()->intended($this->getRedirectPath($user));
     }
@@ -111,7 +111,9 @@ class SocialAuthController extends Controller
         return match ($user->role) {
             'admin' => route('admin.dashboard'),
             'faculty' => route('faculty.dashboard'),
-            default => route('dashboard'),
+            default => filled($user->student_id) && filled($user->program_code)
+                ? route('dashboard')
+                : route('profile.edit'),
         };
     }
 }
