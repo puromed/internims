@@ -251,7 +251,7 @@ new class extends Component {
 
         // Dates
         $this->dates = \App\Models\ImportantDate::query()
-            ->where('semester', \App\Services\SemesterService::getCurrentSemesterCode())
+            ->where('semester', \App\Models\AcademicSetting::currentSemesterCode())
             ->orderBy('date')
             ->get()
             ->map(fn ($d) => [

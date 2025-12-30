@@ -24,7 +24,7 @@ Route::get('/gallery', function () {
     return view('gallery');
 })->name('gallery');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureStudentProfileComplete::class])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
     // Student routes

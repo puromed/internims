@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AcademicSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -9,14 +10,22 @@ use Livewire\Volt\Component;
 new class extends Component {
     public string $name = '';
     public string $email = '';
+    public string $studentId = '';
+    public string $programCode = '';
+    public string $currentSemesterCode = '';
 
     /**
      * Mount the component.
      */
     public function mount(): void
     {
-        $this->name = Auth::user()->name;
-        $this->email = Auth::user()->email;
+        $user = Auth::user();
+
+        $this->name = $user->name;
+        $this->email = $user->email;
+        $this->studentId = (string) ($user->student_id ?? '');
+        $this->programCode = (string) ($user->program_code ?? '');
+        $this->currentSemesterCode = AcademicSetting::currentSemesterCode();
     }
 
     /**
@@ -26,7 +35,7 @@ new class extends Component {
     {
         $user = Auth::user();
 
-        $validated = $this->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
 
             'email' => [
@@ -37,9 +46,30 @@ new class extends Component {
                 'max:255',
                 Rule::unique(User::class)->ignore($user->id)
             ],
-        ]);
+        ];
 
-        $user->fill($validated);
+        if ($user->role === 'student') {
+            $rules['studentId'] = [
+                'required',
+                'digits:10',
+                Rule::unique(User::class, 'student_id')->ignore($user->id),
+            ];
+            $rules['programCode'] = ['required', 'string', 'max:50'];
+        }
+
+        $validated = $this->validate($rules);
+
+        $attributes = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ];
+
+        if ($user->role === 'student') {
+            $attributes['student_id'] = $validated['studentId'];
+            $attributes['program_code'] = mb_strtoupper($validated['programCode']);
+        }
+
+        $user->fill($attributes);
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
@@ -72,7 +102,7 @@ new class extends Component {
 <section class="w-full">
     @include('partials.settings-heading')
 
-    <x-settings.layout :heading="__('Profile')" :subheading="__('Update your name and email address')">
+    <x-settings.layout :heading="__('Profile')" :subheading="__('Update your personal and academic details')">
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
             <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
 
@@ -97,6 +127,36 @@ new class extends Component {
                     </div>
                 @endif
             </div>
+
+            @if(auth()->user()?->role === 'student')
+                <div class="grid gap-6 md:grid-cols-2">
+                    <flux:input
+                        wire:model="studentId"
+                        label="Student ID"
+                        type="text"
+                        required
+                        autocomplete="off"
+                        placeholder="e.g. 2024123456"
+                    />
+
+                    <flux:input
+                        wire:model="programCode"
+                        label="Program Code"
+                        type="text"
+                        required
+                        autocomplete="off"
+                        placeholder="e.g. CS110"
+                    />
+                </div>
+
+                <flux:input
+                    wire:model="currentSemesterCode"
+                    label="Current Semester"
+                    type="text"
+                    readonly
+                    disabled
+                />
+            @endif
 
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-end">
