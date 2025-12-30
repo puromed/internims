@@ -4,7 +4,7 @@ InternIMS is a modern, reactive internship management system designed for UiTM. 
 
 ---
 
-## 🚀 Quick Setup (Docker / Laravel Sail)
+##  Quick Setup (Docker / Laravel Sail)
 
 This project uses [Laravel Sail](https://laravel.com/docs/sail) for a consistent development environment.
 
@@ -48,9 +48,11 @@ cp .env.example .env
 
 The application will be available at: **[http://localhost](http://localhost)**
 
+Mailpit will be available at: **[http://localhost:8025](http://localhost:8025)**
+
 ---
 
-## 🔐 Seeded Credentials
+##  Seeded Credentials
 
 You can log in with the following accounts for testing:
 
@@ -62,7 +64,7 @@ You can log in with the following accounts for testing:
 
 ---
 
-## 🎨 Branding & Features
+##  Branding & Features
 
 ### Custom Branding
 
@@ -81,7 +83,7 @@ You can log in with the following accounts for testing:
 
 ---
 
-## 🛠️ OAuth Configuration
+##  OAuth Configuration
 
 To enable Google/Microsoft logins, add the following to your `.env`:
 
@@ -95,4 +97,4 @@ MICROSOFT_CLIENT_ID=...
 MICROSOFT_CLIENT_SECRET=...
 ```
 
-For a detailed technical overview of system flows, see the **[Presentation Guide](file:///home/cyrowarm/.gemini/antigravity/brain/643584d5-9a42-4b43-b262-4129bf0658e8/presentation_guide.md)**.
+For a detailed technical overview of system flows, see `SYSTEM_DOCUMENTATION.md`.
