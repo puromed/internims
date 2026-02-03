@@ -7,7 +7,11 @@ use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
 
 Route::get('/', function () {
-    return view('welcome');
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return redirect()->route('login');
 })->name('home');
 
 // OAuth Routes
@@ -15,7 +19,10 @@ Route::get('/auth/{provider}', [SocialAuthController::class, 'redirect'])
     ->where('provider', 'google|microsoft')
     ->name('social.redirect');
 
-Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+Route::get('/auth/{provider}/callback', [
+    SocialAuthController::class,
+    'callback',
+])
     ->where('provider', 'google|microsoft')
     ->name('social.callback');
 
@@ -50,10 +57,16 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureStudentProfile
         ->as('admin.')
         ->group(function () {
             Volt::route('dashboard', 'admin.dashboard')->name('dashboard');
-            Volt::route('eligibility', 'admin.eligibility.index')->name('eligibility.index');
-            Volt::route('companies', 'admin.companies.index')->name('companies.index');
+            Volt::route('eligibility', 'admin.eligibility.index')->name(
+                'eligibility.index',
+            );
+            Volt::route('companies', 'admin.companies.index')->name(
+                'companies.index',
+            );
             Volt::route('users', 'admin.users.index')->name('users.index');
-            Volt::route('assignments', 'admin.assignments.index')->name('assignments.index');
+            Volt::route('assignments', 'admin.assignments.index')->name(
+                'assignments.index',
+            );
             Volt::route('dates', 'admin.dates.index')->name('dates.index');
         });
 
@@ -63,22 +76,37 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureStudentProfile
         ->as('faculty.')
         ->group(function () {
             Volt::route('dashboard', 'faculty.dashboard')->name('dashboard');
-            Volt::route('students', 'faculty.students.index')->name('students.index');
-            Volt::route('logbooks', 'faculty.logbooks.index')->name('logbooks.index');
-            Volt::route('logbooks/{logbook}', 'faculty.logbooks.show')->name('logbooks.show');
+            Volt::route('students', 'faculty.students.index')->name(
+                'students.index',
+            );
+            Volt::route('logbooks', 'faculty.logbooks.index')->name(
+                'logbooks.index',
+            );
+            Volt::route('logbooks/{logbook}', 'faculty.logbooks.show')->name(
+                'logbooks.show',
+            );
         });
 
     // Volt User Settings Routes
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');
-    Volt::route('settings/password', 'settings.password')->name('user-password.edit');
-    Volt::route('settings/appearance', 'settings.appearance')->name('appearance.edit');
-    Route::post('appearance/theme', ThemePreferenceController::class)->name('appearance.update');
+    Volt::route('settings/password', 'settings.password')->name(
+        'user-password.edit',
+    );
+    Volt::route('settings/appearance', 'settings.appearance')->name(
+        'appearance.edit',
+    );
+    Route::post('appearance/theme', ThemePreferenceController::class)->name(
+        'appearance.update',
+    );
 
     Volt::route('settings/two-factor', 'settings.two-factor')
         ->middleware(
             when(
-                Features::canManageTwoFactorAuthentication()
-                && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword'),
+                Features::canManageTwoFactorAuthentication() &&
+                    Features::optionEnabled(
+                        Features::twoFactorAuthentication(),
+                        'confirmPassword',
+                    ),
                 ['password.confirm'],
                 [],
             ),
