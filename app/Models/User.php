@@ -26,6 +26,8 @@ class User extends Authenticatable
         'password',
         'role',
         'theme_preference',
+        'student_id',
+        'program_code',
     ];
 
     public function socialAccounts(): HasMany
@@ -66,7 +68,7 @@ class User extends Authenticatable
         return Str::of($this->name)
             ->explode(' ')
             ->take(2)
-            ->map(fn($word) => Str::substr($word, 0, 1))
+            ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
     }
 
@@ -110,7 +112,7 @@ class User extends Authenticatable
      */
     public function supervisesLogbookEntry(LogbookEntry $entry): bool
     {
-        if (!$this->isFaculty()) {
+        if (! $this->isFaculty()) {
             return false;
         }
 

@@ -145,14 +145,32 @@ new class extends Component {
             $query->where("role", $this->roleFilter);
         }
 
-        if ($this->search !== "") {
-            $query->where(function ($q) {
-                $q->where("name", "like", "%" . $this->search . "%")->orWhere(
-                    "email",
-                    "like",
-                    "%" . $this->search . "%",
-                );
-            });
+        $search = trim($this->search);
+
+        if ($search !== "") {
+            if (preg_match('/^(?:id:|#)\\s*(\\d+)$/i', $search, $matches) === 1) {
+                $query->whereKey((int) $matches[1]);
+            } else {
+                $query->where(function ($q) use ($search) {
+                    $q->where("name", "like", "%" . $search . "%")->orWhere(
+                        "email",
+                        "like",
+                        "%" . $search . "%",
+                    )->orWhere(
+                        "student_id",
+                        "like",
+                        "%" . $search . "%",
+                    )->orWhere(
+                        "program_code",
+                        "like",
+                        "%" . $search . "%",
+                    );
+
+                    if (ctype_digit($search)) {
+                        $q->orWhere("id", (int) $search);
+                    }
+                });
+            }
         }
 
         return [
@@ -249,65 +267,99 @@ new class extends Component {
             <flux:button size="sm" variant="{{ $roleFilter === 'faculty' ? 'filled' : 'subtle' }}" wire:click="$set('roleFilter', 'faculty')" icon="user">Faculty</flux:button>
             <flux:button size="sm" variant="{{ $roleFilter === 'admin' ? 'filled' : 'subtle' }}" wire:click="$set('roleFilter', 'admin')" icon="shield-check">Admins</flux:button>
         </div>
-        <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" placeholder="Search users..." class="w-full sm:w-64" />
+        <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" placeholder="Search… (name/email/student ID/program or id:123)" class="w-full sm:w-80" />
     </div>
 
-    {{-- Users Grid --}}
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        @forelse($users as $user)
-            @php
-                $roleConfig = [
-                    'student' => ['color' => 'bg-indigo-50 text-indigo-700 ring-indigo-600/20', 'icon' => 'academic-cap'],
-                    'faculty' => ['color' => 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', 'icon' => 'user'],
-                    'admin' => ['color' => 'bg-purple-50 text-purple-700 ring-purple-600/20', 'icon' => 'shield-check'],
-                ];
-                $config = $roleConfig[$user->role] ?? $roleConfig['student'];
-                $initials = collect(explode(' ', $user->name))->map(fn($w) => strtoupper(substr($w, 0, 1)))->take(2)->join('');
-            @endphp
+    {{-- Users Table --}}
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-zinc-900">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-zinc-800/50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">ID</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Name</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Email</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Student ID</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Program</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Role</th>
+                        <th scope="col" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-zinc-900">
+                    @forelse($users as $user)
+                        @php
+                            $roleConfig = [
+                                'student' => ['color' => 'bg-indigo-50 text-indigo-700 ring-indigo-600/20 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/30', 'icon' => 'academic-cap'],
+                                'faculty' => ['color' => 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/30', 'icon' => 'user'],
+                                'admin' => ['color' => 'bg-purple-50 text-purple-700 ring-purple-600/20 dark:bg-purple-500/10 dark:text-purple-300 dark:ring-purple-400/30', 'icon' => 'shield-check'],
+                            ];
+                            $config = $roleConfig[$user->role] ?? $roleConfig['student'];
+                        @endphp
 
-            <div class="flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
-                <div class="flex items-start justify-between gap-4">
-                    <div class="flex items-center gap-3">
-                        <div class="h-10 w-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                            {{ $initials }}
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $user->name }}</p>
-                            <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $user->email }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
-                    <div class="flex items-center justify-between">
-                        @if($editingUserId === $user->id)
-                            <div class="flex items-center gap-2">
-                                <select wire:model="editingRole" class="rounded-lg border-gray-300 py-1 text-xs dark:border-gray-600 dark:bg-slate-800 dark:text-gray-100">
-                                    <option value="student">Student</option>
-                                    <option value="faculty">Faculty</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                                <flux:button size="xs" variant="primary" icon="check" wire:click="updateRole" />
-                                <flux:button size="xs" variant="ghost" icon="x-mark" wire:click="cancelEditing" />
-                            </div>
-                        @else
-                            <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ $config['color'] }}">
-                                <flux:icon name="{{ $config['icon'] }}" class="size-3" />
-                                {{ ucfirst($user->role) }}
-                            </span>
-                            @if($user->id !== auth()->id())
-                                <flux:button size="xs" variant="ghost" icon="pencil" wire:click="startEditing({{ $user->id }}, '{{ $user->role }}')" />
-                            @endif
-                        @endif
-                    </div>
-                </div>
-            </div>
-        @empty
-            <div class="col-span-full rounded-xl border border-gray-200 bg-white p-12 text-center dark:border-gray-700 dark:bg-zinc-900">
-                <flux:icon name="users" class="mx-auto size-12 text-zinc-300" />
-                <p class="mt-4 text-sm font-medium text-zinc-500">No users found matching your filters.</p>
-            </div>
-        @endforelse
+                        <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/40">
+                            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {{ $user->id }}
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                                {{ $user->name }}
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                {{ $user->email }}
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                @if($user->role === 'student' && filled($user->student_id))
+                                    <span class="font-mono text-xs">{{ $user->student_id }}</span>
+                                @else
+                                    <span class="text-gray-400 dark:text-gray-500">—</span>
+                                @endif
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                @if($user->role === 'student' && filled($user->program_code))
+                                    <span class="font-mono text-xs">{{ $user->program_code }}</span>
+                                @else
+                                    <span class="text-gray-400 dark:text-gray-500">—</span>
+                                @endif
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                                @if($editingUserId === $user->id)
+                                    <select wire:model="editingRole" class="rounded-lg border-gray-300 py-1 text-sm dark:border-gray-600 dark:bg-slate-800 dark:text-gray-100">
+                                        <option value="student">Student</option>
+                                        <option value="faculty">Faculty</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                @else
+                                    <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ $config['color'] }}">
+                                        <flux:icon name="{{ $config['icon'] }}" class="size-3" />
+                                        {{ ucfirst($user->role) }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-4 text-right text-sm">
+                                @if($editingUserId === $user->id)
+                                    <div class="inline-flex items-center gap-2">
+                                        <flux:button size="xs" variant="primary" icon="check" wire:click="updateRole" />
+                                        <flux:button size="xs" variant="ghost" icon="x-mark" wire:click="cancelEditing" />
+                                    </div>
+                                @else
+                                    @if($user->id !== auth()->id())
+                                        <flux:button size="xs" variant="ghost" icon="pencil" wire:click="startEditing({{ $user->id }}, '{{ $user->role }}')" />
+                                    @else
+                                        <span class="text-xs text-gray-400 dark:text-gray-500">—</span>
+                                    @endif
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center">
+                                <flux:icon name="users" class="mx-auto size-12 text-zinc-300" />
+                                <p class="mt-4 text-sm font-medium text-zinc-500">No users found matching your filters.</p>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 
     {{-- Pagination --}}

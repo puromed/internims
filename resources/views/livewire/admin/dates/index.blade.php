@@ -1,11 +1,13 @@
 <?php
 
+use App\Models\AcademicSetting;
 use App\Models\ImportantDate;
 use App\Services\SemesterService;
 use Carbon\Carbon;
 use function Livewire\Volt\{state, computed, rules};
 
 state([
+    'currentSemesterCode' => AcademicSetting::currentSemesterCode(),
     'title' => '',
     'date' => '',
     'type' => 'eligibility',
@@ -13,12 +15,27 @@ state([
 ]);
 
 rules([
+    'currentSemesterCode' => ['required', 'regex:/^\d{4}[12]$/'],
     'title' => 'required|string|max:255',
     'date' => 'required|date',
     'type' => 'required|in:eligibility,placement,internship,other',
 ]);
 
 $dates = computed(fn() => ImportantDate::latest('date')->get());
+
+$saveCurrentSemester = function (): void {
+    $this->validateOnly('currentSemesterCode');
+
+    AcademicSetting::query()->updateOrCreate(
+        ['id' => 1],
+        [
+            'current_semester_code' => $this->currentSemesterCode,
+            'updated_by' => auth()->id(),
+        ],
+    );
+
+    $this->dispatch('notify', 'Current semester updated.');
+};
 
 $save = function () {
     $this->validate();
@@ -50,6 +67,21 @@ $delete = function (ImportantDate $date) {
             <flux:subheading>Manage deadlines and important milestones for students.</flux:subheading>
         </div>
         <flux:button variant="primary" icon="plus" wire:click="$set('showModal', true)">Add Date</flux:button>
+    </div>
+
+    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <flux:heading size="lg">Current Semester</flux:heading>
+                <flux:subheading>Set the active semester code (format: YYYY1 or YYYY2).</flux:subheading>
+            </div>
+
+            <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
+                <flux:input wire:model="currentSemesterCode" label="Semester Code" placeholder="e.g. 20251" />
+                <flux:button variant="primary" wire:click="saveCurrentSemester">Save</flux:button>
+            </div>
+        </div>
+        <flux:error name="currentSemesterCode" />
     </div>
 
     <div
