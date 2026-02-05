@@ -104,7 +104,7 @@ class SocialAuthController extends Controller
         return match ($user->role) {
             'admin' => route('admin.dashboard'),
             'faculty' => route('faculty.dashboard'),
-            default => filled($user->student_id) && filled($user->program_code)
+            default => filled($user->student_id) && filled($user->program_code) && filled($user->password)
             ? route('dashboard')
             : route('profile.edit'),
         };
