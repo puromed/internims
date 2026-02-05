@@ -36,7 +36,7 @@ new class extends Component {
         $placementUnlocked = $eligibilityComplete;
         $logbooksUnlocked = (bool) $placement;
         $weeksCompleted = $placement && $placement->start_date
-            ? round(min(now()->diffInWeeks($placement->start_date), 24), 1)
+            ? round(max(0, min(now()->diffInWeeks($placement->start_date, false), 24)), 1)
             : 0;
 
         // Logbooks

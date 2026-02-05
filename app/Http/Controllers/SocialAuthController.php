@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\SocialAccount;
 use App\Models\User;
 use App\Notifications\WelcomeNotification;
-use App\Services\EmailDomainValidator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
@@ -22,7 +21,7 @@ class SocialAuthController extends Controller
      */
     public function redirect(string $provider): RedirectResponse
     {
-        if (! in_array($provider, $this->providers)) {
+        if (!in_array($provider, $this->providers)) {
             abort(404);
         }
 
@@ -34,7 +33,7 @@ class SocialAuthController extends Controller
      */
     public function callback(string $provider): RedirectResponse
     {
-        if (! in_array($provider, $this->providers)) {
+        if (!in_array($provider, $this->providers)) {
             abort(404);
         }
 
@@ -42,7 +41,7 @@ class SocialAuthController extends Controller
             $socialUser = Socialite::driver($provider)->user();
         } catch (\Exception $e) {
             return redirect()->route('login')
-                ->with('error', 'Unable to authenticate with '.ucfirst($provider).'. Please try again.');
+                ->with('error', 'Unable to authenticate with ' . ucfirst($provider) . '. Please try again.');
         }
 
         // Check if this social account already exists
@@ -71,12 +70,6 @@ class SocialAuthController extends Controller
             Auth::login($user);
 
             return redirect()->intended($this->getRedirectPath($user));
-        }
-
-        // For new users, validate email domain
-        if (! EmailDomainValidator::isAllowed($socialUser->getEmail())) {
-            return redirect()->route('login')
-                ->with('error', EmailDomainValidator::getErrorMessage());
         }
 
         // Create a new user
@@ -112,8 +105,8 @@ class SocialAuthController extends Controller
             'admin' => route('admin.dashboard'),
             'faculty' => route('faculty.dashboard'),
             default => filled($user->student_id) && filled($user->program_code)
-                ? route('dashboard')
-                : route('profile.edit'),
+            ? route('dashboard')
+            : route('profile.edit'),
         };
     }
 }
