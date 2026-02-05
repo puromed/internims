@@ -109,7 +109,7 @@ new class extends Component {
             <div>
                 <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
 
-                @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&! auth()->user()->hasVerifiedEmail())
+                @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && !auth()->user()->hasVerifiedEmail())
                     <div>
                         <flux:text class="mt-4">
                             {{ __('Your email address is unverified.') }}
@@ -130,32 +130,19 @@ new class extends Component {
 
             @if(auth()->user()?->role === 'student')
                 <div class="grid gap-6 md:grid-cols-2">
-                    <flux:input
-                        wire:model="studentId"
-                        label="Student ID"
-                        type="text"
-                        required
-                        autocomplete="off"
-                        placeholder="e.g. 2024123456"
-                    />
+                    <div>
+                        <flux:input wire:model="studentId" label="Student ID" type="text" required autocomplete="off"
+                            placeholder="e.g. 2024123456" maxlength="10" />
+                        <flux:text class="mt-1 text-xs text-zinc-500">
+                            {{ strlen($studentId) }}/10 digits
+                        </flux:text>
+                    </div>
 
-                    <flux:input
-                        wire:model="programCode"
-                        label="Program Code"
-                        type="text"
-                        required
-                        autocomplete="off"
-                        placeholder="e.g. CS110"
-                    />
+                    <flux:input wire:model="programCode" label="Program Code" type="text" required autocomplete="off"
+                        placeholder="e.g. CS110" />
                 </div>
 
-                <flux:input
-                    wire:model="currentSemesterCode"
-                    label="Current Semester"
-                    type="text"
-                    readonly
-                    disabled
-                />
+                <flux:input wire:model="currentSemesterCode" label="Current Semester" type="text" readonly disabled />
             @endif
 
             <div class="flex items-center gap-4">
