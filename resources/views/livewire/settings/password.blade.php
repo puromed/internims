@@ -10,16 +10,27 @@ new class extends Component {
     public string $password = '';
     public string $password_confirmation = '';
 
+    public function hasPassword(): bool
+    {
+        return Auth::user()->password !== null;
+    }
+
     /**
      * Update the password for the currently authenticated user.
      */
     public function updatePassword(): void
     {
         try {
-            $validated = $this->validate([
-                'current_password' => ['required', 'string', 'current_password'],
+            $rules = [
                 'password' => ['required', 'string', Password::defaults(), 'confirmed'],
-            ]);
+            ];
+
+            // Only require current password if user already has one
+            if ($this->hasPassword()) {
+                $rules['current_password'] = ['required', 'string', 'current_password'];
+            }
+
+            $validated = $this->validate($rules);
         } catch (ValidationException $e) {
             $this->reset('current_password', 'password', 'password_confirmation');
 
@@ -41,27 +52,14 @@ new class extends Component {
 
     <x-settings.layout :heading="__('Update password')" :subheading="__('Ensure your account is using a long, random password to stay secure')">
         <form method="POST" wire:submit="updatePassword" class="mt-6 space-y-6">
-            <flux:input
-                wire:model="current_password"
-                :label="__('Current password')"
-                type="password"
-                required
-                autocomplete="current-password"
-            />
-            <flux:input
-                wire:model="password"
-                :label="__('New password')"
-                type="password"
-                required
-                autocomplete="new-password"
-            />
-            <flux:input
-                wire:model="password_confirmation"
-                :label="__('Confirm Password')"
-                type="password"
-                required
-                autocomplete="new-password"
-            />
+            @if($this->hasPassword())
+                <flux:input wire:model="current_password" :label="__('Current password')" type="password" required
+                    autocomplete="current-password" />
+            @endif
+            <flux:input wire:model="password" :label="__('New password')" type="password" required
+                autocomplete="new-password" />
+            <flux:input wire:model="password_confirmation" :label="__('Confirm Password')" type="password" required
+                autocomplete="new-password" />
 
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-end">
