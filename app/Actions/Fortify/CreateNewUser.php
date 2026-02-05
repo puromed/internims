@@ -4,7 +4,6 @@ namespace App\Actions\Fortify;
 
 use App\Models\User;
 use App\Notifications\WelcomeNotification;
-use App\Services\EmailDomainValidator;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -28,11 +27,6 @@ class CreateNewUser implements CreatesNewUsers
                 'email',
                 'max:255',
                 Rule::unique(User::class),
-                function ($attribute, $value, $fail) {
-                    if (!EmailDomainValidator::isAllowed($value)) {
-                        $fail(EmailDomainValidator::getErrorMessage());
-                    }
-                },
             ],
             'password' => $this->passwordRules(),
         ])->validate();
