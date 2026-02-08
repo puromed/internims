@@ -4,58 +4,80 @@ use App\Models\AcademicSetting;
 use App\Models\ImportantDate;
 use App\Services\SemesterService;
 use Carbon\Carbon;
-use function Livewire\Volt\{state, computed, rules};
+use Illuminate\Database\Eloquent\Collection;
+use Livewire\Volt\Component;
 
-state([
-    'currentSemesterCode' => AcademicSetting::currentSemesterCode(),
-    'title' => '',
-    'date' => '',
-    'type' => 'eligibility',
-    'showModal' => false,
-]);
+new class extends Component {
+    public string $currentSemesterCode = '';
 
-rules([
-    'currentSemesterCode' => ['required', 'regex:/^\d{4}[12]$/'],
-    'title' => 'required|string|max:255',
-    'date' => 'required|date',
-    'type' => 'required|in:eligibility,placement,internship,other',
-]);
+    public string $title = '';
 
-$dates = computed(fn() => ImportantDate::latest('date')->get());
+    public string $date = '';
 
-$saveCurrentSemester = function (): void {
-    $this->validateOnly('currentSemesterCode');
+    public string $type = 'eligibility';
 
-    AcademicSetting::query()->updateOrCreate(
-        ['id' => 1],
-        [
-            'current_semester_code' => $this->currentSemesterCode,
-            'updated_by' => auth()->id(),
-        ],
-    );
+    public bool $showModal = false;
 
-    $this->dispatch('notify', 'Current semester updated.');
-};
+    public function mount(): void
+    {
+        $this->currentSemesterCode = AcademicSetting::currentSemesterCode();
+    }
 
-$save = function () {
-    $this->validate();
+    /**
+     * @return array<string, array<int, string>|string>
+     */
+    protected function rules(): array
+    {
+        return [
+            'currentSemesterCode' => ['required', 'regex:/^\d{4}[12]$/'],
+            'title' => 'required|string|max:255',
+            'date' => 'required|date',
+            'type' => 'required|in:eligibility,placement,internship,other',
+        ];
+    }
 
-    $semester = SemesterService::getSemesterCode(Carbon::parse($this->date));
+    public function getDatesProperty(): Collection
+    {
+        return ImportantDate::query()->latest('date')->get();
+    }
 
-    ImportantDate::create([
-        'title' => $this->title,
-        'date' => $this->date,
-        'type' => $this->type,
-        'semester' => $semester,
-    ]);
+    public function saveCurrentSemester(): void
+    {
+        $this->validateOnly('currentSemesterCode');
 
-    $this->reset(['title', 'date', 'type', 'showModal']);
-    $this->dispatch('notify', 'Important date added successfully.');
-};
+        AcademicSetting::query()->updateOrCreate(
+            ['id' => 1],
+            [
+                'current_semester_code' => $this->currentSemesterCode,
+                'updated_by' => auth()->id(),
+            ],
+        );
 
-$delete = function (ImportantDate $date) {
-    $date->delete();
-    $this->dispatch('notify', 'Important date deleted.');
+        $this->dispatch('notify', 'Current semester updated.');
+    }
+
+    public function save(): void
+    {
+        $this->validate();
+
+        $semester = SemesterService::getSemesterCode(Carbon::parse($this->date));
+
+        ImportantDate::query()->create([
+            'title' => $this->title,
+            'date' => $this->date,
+            'type' => $this->type,
+            'semester' => $semester,
+        ]);
+
+        $this->reset(['title', 'date', 'type', 'showModal']);
+        $this->dispatch('notify', 'Important date added successfully.');
+    }
+
+    public function delete(ImportantDate $date): void
+    {
+        $date->delete();
+        $this->dispatch('notify', 'Important date deleted.');
+    }
 };
 
 ?>

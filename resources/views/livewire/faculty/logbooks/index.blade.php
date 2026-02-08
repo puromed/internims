@@ -216,7 +216,7 @@ new class extends Component {
         </div>
 
         {{-- Simple filters (you can style these like the prototype) --}}
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap gap-3" data-tour="faculty-logbook-filters">
             <div>
                 <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search student</label>
                 <input type="text" wire:model.debounce.500ms="search"
@@ -248,7 +248,7 @@ new class extends Component {
     </div>
 
     {{-- Queue list --}}
-    <div class="rounded-2xl bg-white dark:bg-slate-900/80 shadow-sm ring-1 ring-gray-200 dark:ring-white/10 p-6">
+    <div class="rounded-2xl bg-white dark:bg-slate-900/80 shadow-sm ring-1 ring-gray-200 dark:ring-white/10 p-6" data-tour="faculty-logbook-queue">
         {{-- Header with bulk actions --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <div class="flex items-center gap-4">

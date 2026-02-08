@@ -240,7 +240,7 @@ new class extends Component {
     </flux:modal>
 
     {{-- Stats Overview --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="admin-users-stats">
         <div class="flex flex-col gap-1 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Users</span>
             <span class="text-2xl font-bold text-gray-900 dark:text-white">{{ $counts['all'] }}</span>
@@ -261,7 +261,7 @@ new class extends Component {
 
     {{-- Filters --}}
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2" data-tour="admin-users-filters">
             <flux:button size="sm" variant="{{ $roleFilter === 'all' ? 'filled' : 'subtle' }}" wire:click="$set('roleFilter', 'all')" icon="users">All</flux:button>
             <flux:button size="sm" variant="{{ $roleFilter === 'student' ? 'filled' : 'subtle' }}" wire:click="$set('roleFilter', 'student')" icon="academic-cap">Students</flux:button>
             <flux:button size="sm" variant="{{ $roleFilter === 'faculty' ? 'filled' : 'subtle' }}" wire:click="$set('roleFilter', 'faculty')" icon="user">Faculty</flux:button>
@@ -271,7 +271,7 @@ new class extends Component {
     </div>
 
     {{-- Users Table --}}
-    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-zinc-900">
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-zinc-900" data-tour="admin-users-table">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead class="bg-gray-50 dark:bg-zinc-800/50">

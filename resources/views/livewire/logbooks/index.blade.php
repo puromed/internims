@@ -140,7 +140,7 @@ new class extends Component {
 
     {{-- Create form --}}
     <div class="grid gap-6 lg:grid-cols-3">
-        <div class="lg:col-span-2 rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-6 dark:bg-zinc-950 dark:ring-white/10 dark:shadow-none">
+        <div class="lg:col-span-2 rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-6 dark:bg-zinc-950 dark:ring-white/10 dark:shadow-none" data-tour="logbook-new-entry">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">New Logbook Entry</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Week {{ $week_number }}</p>
 
@@ -197,7 +197,7 @@ new class extends Component {
     </div>
 
     {{-- Recent logbooks --}}
-    <div class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-6 dark:bg-zinc-950 dark:ring-white/10 dark:shadow-none">
+    <div class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-6 dark:bg-zinc-950 dark:ring-white/10 dark:shadow-none" data-tour="logbook-recent-list">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Logbooks</h3>
             <span class="text-sm text-gray-500 dark:text-gray-400">Latest 8</span>

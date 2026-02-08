@@ -149,7 +149,7 @@ new class extends Component {
     </div>
 
      {{-- Stats Overview --}}
-     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3" data-tour="admin-assignments-stats">
         <div class="flex flex-col gap-1 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Internships</span>
             <span class="text-2xl font-bold text-gray-900 dark:text-white">{{ $internships->count() }}</span>
@@ -170,7 +170,7 @@ new class extends Component {
     </div>
 
     {{-- Assignments Table --}}
-    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-zinc-900">
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-zinc-900" data-tour="admin-assignments-table">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-slate-800/50">
                 <tr>

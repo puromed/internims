@@ -295,7 +295,7 @@ new class extends Component {
     </nav>
 
     {{-- Stats Grid --}}
-    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8" data-tour="student-dashboard-stats">
         @foreach($stats as $stat)
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
                 <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ $stat['label'] }}</dt>
@@ -328,7 +328,7 @@ new class extends Component {
 
     <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {{-- Left Column: Required Actions --}}
-        <div class="lg:col-span-2">
+        <div class="lg:col-span-2" data-tour="student-dashboard-actions">
             <flux:heading size="lg" class="mb-4">Required Actions</flux:heading>
             <div class="divide-y divide-gray-200 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-zinc-900 dark:divide-gray-700">
                 @include('livewire.partials.dashboard-actions', ['actions' => $actions])
@@ -336,7 +336,7 @@ new class extends Component {
         </div>
 
         {{-- Right Column: Activity Feed --}}
-        <div class="lg:col-span-1">
+        <div class="lg:col-span-1" data-tour="student-dashboard-activity">
             <flux:heading size="lg" class="mb-4">Recent Activity</flux:heading>
             <div class="rounded-xl border border-gray-200 bg-white shadow-sm p-6 dark:border-gray-700 dark:bg-zinc-900">
                 <div class="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">

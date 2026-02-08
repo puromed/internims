@@ -69,7 +69,7 @@ new class extends Component {
         $total = count($this->requiredTypes);
         $pct = $total ? intval(($approved / $total) * 100) : 0;
     @endphp
-    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
+    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900" data-tour="eligibility-progress">
         <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
             <span>Document Progress</span>
             <span class="font-semibold text-indigo-600 dark:text-indigo-400">{{ $pct }}%</span>
@@ -95,7 +95,7 @@ new class extends Component {
             'missing' => ['label' => 'Not Submitted', 'color' => 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-gray-400', 'icon' => 'cloud-arrow-up'],
         ];
     @endphp
-    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3" data-tour="eligibility-documents">
         @foreach($requiredTypes as $type)
             @php
                 $doc = $docs[$type] ?? null;
@@ -156,7 +156,7 @@ new class extends Component {
 
     {{-- Guidelines --}}
     <div
-        class="rounded-xl border border-indigo-100 bg-indigo-50 p-6 shadow-sm dark:border-indigo-900/50 dark:bg-indigo-950/20">
+        class="rounded-xl border border-indigo-100 bg-indigo-50 p-6 shadow-sm dark:border-indigo-900/50 dark:bg-indigo-950/20" data-tour="eligibility-guidelines">
         <div class="flex items-center gap-2 text-indigo-800 dark:text-indigo-300 font-semibold mb-3">
             <flux:icon name="information-circle" class="size-5" />
             Document Guidelines

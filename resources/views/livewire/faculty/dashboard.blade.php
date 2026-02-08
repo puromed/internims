@@ -88,7 +88,7 @@ new class extends Component {
     </div>
 
     {{-- Stats Grid --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-tour="faculty-dashboard-stats">
         {{-- Pending Logbooks --}}
         <div class="flex flex-col justify-between rounded-xl border border-amber-200 bg-amber-50/30 p-5 shadow-sm dark:border-amber-500/20 dark:bg-amber-500/5">
             <div class="flex items-center justify-between">
@@ -146,7 +146,7 @@ new class extends Component {
     <div class="space-y-4">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Assigned Students</h3>
 
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-tour="faculty-dashboard-students">
              @forelse($students as $student)
                 <div class="bg-white dark:bg-slate-900/80 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-all">
                     {{-- Student Header --}}

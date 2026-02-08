@@ -246,7 +246,7 @@ new class extends Component {
     </div>
 
     {{-- Stats Overview --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="admin-eligibility-stats">
         <div class="flex flex-col gap-1 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Applications</span>
             <span class="text-2xl font-bold text-gray-900 dark:text-white">{{ $counts['all'] }}</span>
@@ -267,7 +267,7 @@ new class extends Component {
 
     {{-- Filters --}}
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2" data-tour="admin-eligibility-filters">
             <flux:button size="sm" variant="{{ $statusFilter === 'all' ? 'filled' : 'subtle' }}" wire:click="$set('statusFilter', 'all')" icon="list-bullet">All ({{ $counts['all'] }})</flux:button>
             <flux:button size="sm" variant="{{ $statusFilter === 'pending' ? 'filled' : 'subtle' }}" wire:click="$set('statusFilter', 'pending')" icon="clock" class="{{ $statusFilter === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' : '' }}">Pending ({{ $counts['pending'] }})</flux:button>
             <flux:button size="sm" variant="{{ $statusFilter === 'approved' ? 'filled' : 'subtle' }}" wire:click="$set('statusFilter', 'approved')" icon="check-circle" class="{{ $statusFilter === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : '' }}">Approved ({{ $counts['approved'] }})</flux:button>
@@ -288,7 +288,7 @@ new class extends Component {
     </div>
 
 	    {{-- Queue --}}
-	    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+	    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2" data-tour="admin-eligibility-students">
 	        @forelse($students as $student)
 	            @php
 	                $docsByType = $student->eligibilityDocs->keyBy('type');

@@ -233,7 +233,7 @@ new class extends Component {
         $stat = $statusMap[$status] ?? $statusMap['draft'];
     @endphp
 
-    <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
+    <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900" data-tour="placement-status">
         <div>
             <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Status</p>
             <div class="mt-1">
@@ -345,7 +345,7 @@ new class extends Component {
         </div>
     @endif
 
-    <div class="space-y-6">
+    <div class="space-y-6" data-tour="placement-proposals">
         @foreach($proposals as $index => $proposal)
             <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
                 <div class="flex items-center justify-between mb-6">
