@@ -211,7 +211,7 @@ new class extends Component {
     </div>
 
     {{-- Stats Overview --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="admin-companies-stats">
         <div class="flex flex-col gap-1 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Proposals</span>
             <span class="text-2xl font-bold text-gray-900 dark:text-white">{{ $counts['all'] }}</span>
@@ -242,7 +242,7 @@ new class extends Component {
     </div>
 
     {{-- Proposals Grid --}}
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2" data-tour="admin-companies-proposals">
         @forelse($proposalGroups as $studentProposals)
             @php
                 $user = $studentProposals->first()?->application?->user;

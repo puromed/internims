@@ -86,7 +86,7 @@ new class extends Component {
     </div>
 
     {{-- Stats Grid --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-tour="admin-dashboard-stats">
         {{-- Users Stats --}}
         <div class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
             <div class="flex items-center justify-between">
@@ -152,7 +152,7 @@ new class extends Component {
     </div>
 
     {{-- Quick Actions --}}
-    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900">
+    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-zinc-900" data-tour="admin-dashboard-actions">
         <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
         <div class="flex flex-wrap gap-3">
             <flux:button href="{{ route('admin.eligibility.index') }}" variant="primary" icon="document-check">Review Eligibility</flux:button>

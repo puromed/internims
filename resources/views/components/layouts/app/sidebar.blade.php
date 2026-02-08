@@ -274,6 +274,49 @@
 
     {{ $slot }}
 
+    {{-- Floating Help Tour Button --}}
+    <div
+        x-data="{
+            routeName: @js(Route::currentRouteName()),
+            visible: false,
+            init() {
+                this.checkVisibility();
+                document.addEventListener('livewire:navigated', () => {
+                    this.$nextTick(() => {
+                        const meta = document.querySelector('meta[name=route-name]');
+                        if (meta) {
+                            this.routeName = meta.getAttribute('content');
+                        }
+                        this.checkVisibility();
+                    });
+                });
+            },
+            checkVisibility() {
+                this.visible = window.internimsTour?.hasTour(this.routeName) ?? false;
+            },
+            startTour() {
+                window.internimsTour?.startTour(this.routeName);
+            },
+        }"
+        x-show="visible"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 scale-90"
+        x-transition:enter-end="opacity-100 scale-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 scale-100"
+        x-transition:leave-end="opacity-0 scale-90"
+        x-cloak
+    >
+        <button
+            @click="startTour()"
+            class="tour-help-btn"
+            title="Take a tour of this page"
+            aria-label="Page tour help"
+        >
+            <i data-lucide="help-circle" class="size-5"></i>
+        </button>
+    </div>
+
     @fluxScripts
     <script>
         (() => {

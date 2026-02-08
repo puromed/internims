@@ -22,6 +22,33 @@
             </div>
         </div>
     </div>
+
+    {{-- Floating Help Button --}}
+    <div x-data="{
+        routeName: @js(Route::currentRouteName()),
+        visible: false,
+        isLoginPage: false,
+        init() {
+            this.checkVisibility();
+            document.addEventListener('livewire:navigated', () => {
+                this.$nextTick(() => {
+                    const meta = document.querySelector('meta[name=route-name]');
+                    if (meta) { this.routeName = meta.getAttribute('content'); }
+                    this.checkVisibility();
+                });
+            });
+        },
+        checkVisibility() {
+            this.visible = window.internimsTour?.hasTour(this.routeName) ?? false;
+            this.isLoginPage = this.routeName === 'login';
+        },
+        startTour() { window.internimsTour?.startTour(this.routeName); },
+    }" x-show="visible" x-transition x-cloak>
+        <button @click="startTour()" :class="isLoginPage ? 'tour-help-btn tour-help-btn-glow' : 'tour-help-btn'" title="Take a tour of this page">
+            <i data-lucide="help-circle" class="size-5"></i>
+        </button>
+    </div>
+
     @fluxScripts
 </body>
 
