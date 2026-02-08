@@ -5,6 +5,36 @@ import { driver } from 'driver.js';
  * Each value has steps following the driver.js API.
  */
 const tours = {
+    // ─── AUTH PAGES ──────────────────────────────────
+    'login': {
+        steps: [
+            {
+                popover: {
+                    title: 'Login to InternIMS',
+                    description: 'Welcome! This is the login page for the internship management system. You can log in with email/password or use OAuth.',
+                },
+            },
+            {
+                element: '[data-tour="login-form"]',
+                popover: {
+                    title: 'Email & Password Login',
+                    description: 'Enter your registered email and password to log in. Faculty and admin accounts must be created by an administrator first.',
+                    side: 'right',
+                    align: 'start',
+                },
+            },
+            {
+                element: '[data-tour="login-oauth"]',
+                popover: {
+                    title: 'OAuth Login (Google/Microsoft)',
+                    description: 'IMPORTANT: OAuth login automatically creates STUDENT accounts only. If you need a faculty or admin account, please contact your administrator to create one for you.',
+                    side: 'top',
+                    align: 'center',
+                },
+            },
+        ],
+    },
+
     // ─── STUDENT PAGES ───────────────────────────────
     'dashboard': {
         steps: [

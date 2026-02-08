@@ -239,3 +239,46 @@ body { @apply bg-gray-50 dark:bg-zinc-900; }
 .dark .tour-help-btn:hover {
     background-color: var(--color-zinc-300);
 }
+
+/* Glowing Help Button (Login Page Only) */
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7),
+                    0 4px 6px -1px rgba(0,0,0,0.1),
+                    0 2px 4px -1px rgba(0,0,0,0.06);
+    }
+    50% {
+        box-shadow: 0 0 0 15px rgba(59, 130, 246, 0),
+                    0 4px 6px -1px rgba(0,0,0,0.1),
+                    0 2px 4px -1px rgba(0,0,0,0.06);
+    }
+}
+
+@keyframes bounce-gentle {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.tour-help-btn-glow {
+    animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite,
+               bounce-gentle 2s ease-in-out infinite;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.tour-help-btn-glow:hover {
+    animation: none;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: scale(1.05);
+}
+
+.dark .tour-help-btn-glow {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+}
+
+.dark .tour-help-btn-glow:hover {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
